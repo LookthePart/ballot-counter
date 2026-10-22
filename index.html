@@ -1,0 +1,1018 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ballot Counter">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#1b3a6b">
+<title>Ballot Counter</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<style>
+:root{
+  --ink:#111; --muted:#444; --line:#222; --bg:#f3f1ea; --card:#fff;
+  --yellow:#ffe94d; --yellow-line:#b39b00; --navy:#1b3a6b; --green:#0b6b2e; --greenbg:#d9f2e0;
+  --amber:#8a4b00; --amberbg:#ffe6bf; --red:#a10000;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:20px;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.3;
+  padding:0 16px calc(64px + env(safe-area-inset-bottom));}
+header.top{position:sticky;top:0;z-index:25;background:var(--navy);color:#fff;margin:0 -16px 16px;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;font-size:1rem;font-weight:800;display:flex;align-items:center;gap:10px;min-height:50px;line-height:1.15}
+header.top button{width:auto;margin:0;min-height:44px;padding:4px 14px;font-size:1.05rem;background:#fff;color:var(--navy);border:0;border-radius:10px;white-space:nowrap}
+.screen{display:none}.screen.on{display:block}
+h2{font-size:1.2rem;margin:26px 0 8px;padding:8px 12px;background:var(--navy);color:#fff;border-radius:10px}
+h2.sub{background:#e4e8f0;color:var(--ink);border:2px solid var(--navy)}
+.card{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+.lbl{display:block;font-size:1.05rem;font-weight:700;margin:0 0 6px}
+.hint{font-size:.85rem;color:var(--muted);margin:4px 0 8px;font-weight:400}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.colhead{font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+input.num,input.txt,input.date,textarea{
+  width:100%;min-height:64px;font-size:1.8rem;font-weight:700;padding:8px 12px;border-radius:12px;color:var(--ink);
+  border:3px solid var(--yellow-line);background:var(--yellow);-webkit-appearance:none;appearance:none;font-family:inherit}
+input.txt{font-size:1.5rem}
+input.num.filled{background:#fff;border-color:#222}
+.red{color:#c00000!important}
+button:disabled{opacity:.35}
+nav.tabs button.dot::after{content:'';display:inline-block;width:10px;height:10px;border-radius:50%;background:#d00000;margin-left:6px;vertical-align:middle}
+.modal button.gap{margin-top:52px}
+.modal img{width:100%;border:2px solid #444;border-radius:8px;margin:8px 0}
+.toast{position:fixed;left:16px;right:16px;bottom:64px;background:#111;color:#fff;padding:14px;border-radius:12px;font-size:1.1rem;font-weight:700;text-align:center;z-index:60}
+.opt{border-left:8px solid var(--navy)}
+#s-backup button{display:block;width:auto;max-width:82%;margin:12px auto 6px;min-height:50px;font-size:.88rem;font-weight:700;padding:8px 20px;line-height:1.2}
+#s-backup .lbl{font-size:1.15rem}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.seg button{margin:0;min-height:56px;padding:6px 2px;min-width:0;width:100%}
+.seg button.on{background:var(--navy);color:#fff}
+.about p,.about li{font-size:.95rem;margin:6px 0}
+.about ul{padding-left:20px;margin:6px 0}
+.about a{color:var(--navy);font-weight:800;word-break:break-all}
+.formula{font-size:.9rem;margin:6px 0;padding:6px 8px;background:#f0f2f7;border-radius:8px}
+.opt .can{font-size:.9rem;margin:6px 0 10px;color:var(--ink)}
+.trashrow{border-top:2px solid #bbb;padding:10px 0}
+input.date{font-size:1.4rem;background:#fff;border-color:var(--line)}
+input.site{background:#fff;border-color:var(--line)}
+textarea{min-height:110px;font-size:1.2rem;font-weight:500;background:#fff;border-color:var(--line);resize:vertical}
+input:focus,textarea:focus{outline:5px solid #1e6bff;outline-offset:1px}
+.tot{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding-top:8px;border-top:2px dashed #999;font-size:1.05rem;font-weight:700}
+.tot .v{font-size:clamp(1.3rem,6vw,1.6rem)}
+.res{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #bbb}
+.res:last-child{border-bottom:0}
+.res .k{font-size:1.05rem;font-weight:700;flex:1;min-width:0}
+.res .v{font-size:clamp(1.3rem,7vw,1.9rem);font-weight:800;min-width:3.5ch;text-align:right;overflow-wrap:anywhere}
+.res.flag{border-radius:10px;padding:12px;margin-top:6px;border:3px solid}
+.res.flag.zero{background:var(--greenbg);border-color:var(--green);color:var(--green)}
+.res.flag.nz{background:var(--amberbg);border-color:var(--amber);color:var(--amber)}
+.badge{display:block;font-size:.8rem;font-weight:700;margin-top:2px}
+.note{font-size:.85rem;color:var(--muted);margin:6px 2px}
+pre.report{white-space:pre-wrap;word-break:break-word;background:#fff;border:2px solid var(--line);border-radius:12px;padding:14px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1rem;margin:10px 0;user-select:text;-webkit-user-select:text}
+button{font-family:inherit;font-size:1.25rem;font-weight:800;border-radius:14px;border:3px solid var(--navy);min-height:64px;padding:10px 16px;background:#fff;color:var(--navy);width:100%;margin:8px 0}
+button.primary{background:var(--navy);color:#fff}
+button.danger{border-color:var(--red);color:var(--red)}
+button.small{min-height:52px;font-size:1.05rem}
+button:active{transform:scale(.98)}
+.banner{background:var(--amberbg);border:3px solid var(--amber);border-radius:14px;padding:12px 14px;margin:0 0 14px;font-weight:700;color:#4a2800}
+.banner button{margin:8px 0 0}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:3px solid var(--navy);z-index:20;padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs button{margin:0;border:0;border-radius:0;min-height:46px;font-size:clamp(12px,3.7vw,16px);font-weight:700;color:var(--muted);background:#fff;line-height:1.1;padding:0;white-space:nowrap;min-width:0;overflow:hidden}
+nav.tabs button.on{background:var(--navy);color:#fff}
+nav.tabs button span{display:none}
+#nextbar{position:fixed;left:0;right:0;display:none;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:8px;background:#d7dbe3;border-top:2px solid #888;z-index:30}
+#nextbar button{margin:0;min-height:56px;font-size:1.15rem;background:#fff}
+#nextbar button.go{background:var(--navy);color:#fff}
+.night{display:block;padding:10px 12px;margin:8px 0}
+.night .t{font-size:1.1rem;font-weight:800}
+.night .s{font-size:.85rem;color:var(--muted)}
+.nbtns{display:grid;grid-template-columns:1.4fr 1fr .8fr;gap:8px;margin-top:8px}
+.nbtns button{margin:0;min-height:52px;font-size:.95rem;padding:4px 6px;line-height:1.1}
+.modalbg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:calc(74px + env(safe-area-inset-top)) 14px 14px}
+.modalbg .xclose{position:fixed;top:calc(12px + env(safe-area-inset-top));right:14px;width:54px;min-height:54px;height:54px;margin:0;padding:0;border-radius:50%;background:#fff;color:var(--navy);border:3px solid var(--navy);font-size:1.6rem;line-height:1;z-index:55}
+.modal{background:#fff;border-radius:16px;border:3px solid var(--navy);padding:16px;width:100%;max-width:560px;margin:auto}
+.modal h3{margin:0 0 8px;font-size:1.3rem}
+.shot{background:#e6f4ff;border:3px solid #0a5fb4;border-radius:12px;padding:10px 12px;font-weight:700;font-size:1rem;margin:0 0 10px}
+table.sum{width:100%;table-layout:fixed;border-collapse:collapse;font-size:.82rem;line-height:1.2}
+table.sum th,table.sum td{border:1px solid #666;padding:4px 5px;text-align:right}
+table.sum td,table.sum th{overflow-wrap:anywhere}
+.modal.compact{padding:10px}.modal.compact h3{font-size:1rem;margin:0 0 4px}
+.modal.compact button{min-height:48px;margin:8px 0 0;font-size:1.05rem}
+.modal.compact .shot{font-size:.8rem;padding:6px 8px;margin:0 0 6px;border-width:2px}
+table.sum td:first-child,table.sum th:first-child{text-align:left}
+table.sum th{background:#e4e8f0}
+table.sum tr.sec td{background:var(--navy);color:#fff;font-weight:800;text-align:left}
+table.sum td.b{font-weight:800}
+.ok{color:var(--green);font-weight:800}
+</style>
+</head>
+<body>
+<header class="top"><button id="hdrBack" style="display:none">‹ Back</button><span id="hdrTitle">Ballot Counter</span></header>
+
+<!-- ============ TONIGHT ============ -->
+<section id="s-tonight" class="screen on">
+  <div id="banners"></div>
+
+  <div class="card">
+    <label class="lbl" for="f-date">Date</label>
+    <input class="date" id="f-date" type="date">
+    <label class="lbl" for="f-site" style="margin-top:12px">Site Name:</label>
+    <input class="txt site" id="f-site" type="text" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="note">Yellow boxes are the only ones you type in. Everything else fills in by itself.</div>
+  </div>
+
+  <h2>Total Received by Polling Location</h2>
+  <div class="card">
+    <div class="row2">
+      <div><div class="colhead">Large Ballot</div><input class="num" data-k="recvL" inputmode="numeric" pattern="[0-9]*" aria-label="Total Received, Large Ballot"></div>
+      <div><div class="colhead">Small Card</div><input class="num" data-k="recvS" inputmode="numeric" pattern="[0-9]*" aria-label="Total Received, Small Card"></div>
+    </div>
+    <div class="tot"><span>TOTAL</span><span class="v" data-o="C6"></span></div>
+  </div>
+
+  <h2>Unused Ballots</h2>
+  <div class="card">
+    <span class="lbl">Sealed - Never Opened</span>
+    <div class="hint">Includes any ballots which never left the ballot bag and were never unwrapped</div>
+    <div class="row2">
+      <div><div class="colhead">Large Ballot</div><input class="num" data-k="sealL" inputmode="numeric" pattern="[0-9]*" aria-label="Sealed, Large Ballot"></div>
+      <div><div class="colhead">Small Card</div><input class="num" data-k="sealS" inputmode="numeric" pattern="[0-9]*" aria-label="Sealed, Small Card"></div>
+    </div>
+    <div class="tot"><span>TOTAL</span><span class="v" data-o="C9"></span></div>
+  </div>
+  <div class="card">
+    <span class="lbl">Opened - Not Used</span>
+    <div class="hint">Includes any ballots that were unsealed but not used (e.g. from top of bag or next to printers)</div>
+    <div class="row2">
+      <div><div class="colhead">Large Ballot</div><input class="num" data-k="openL" inputmode="numeric" pattern="[0-9]*" aria-label="Opened, Large Ballot"></div>
+      <div><div class="colhead">Small Card</div><input class="num" data-k="openS" inputmode="numeric" pattern="[0-9]*" aria-label="Opened, Small Card"></div>
+    </div>
+    <div class="tot"><span>TOTAL</span><span class="v" data-o="C10"></span></div>
+  </div>
+
+  <h2>Ballots Used: Machine 1</h2>
+  <div class="card">
+    <label class="lbl">Machine 1 - Public</label>
+    <input class="num" data-k="m1pub" inputmode="numeric" pattern="[0-9]*">
+    <label class="lbl" style="margin-top:14px">Machine 1 - Protected Count</label>
+    <input class="num" data-k="m1prot" inputmode="numeric" pattern="[0-9]*">
+  </div>
+
+  <h2>Ballots Used: Machine 2</h2>
+  <div class="card">
+    <label class="lbl">Machine 2 - Public</label>
+    <input class="num" data-k="m2pub" inputmode="numeric" pattern="[0-9]*">
+    <label class="lbl" style="margin-top:14px">Machine 2 - Protected Count</label>
+    <input class="num" data-k="m2prot" inputmode="numeric" pattern="[0-9]*">
+  </div>
+
+  <h2>Ballots, Other</h2>
+  <div class="card">
+    <label class="lbl">Provisional</label>
+    <input class="num" data-k="prov" inputmode="numeric" pattern="[0-9]*">
+    <label class="lbl" style="margin-top:14px">Spoiled</label>
+    <input class="num" data-k="spoil" inputmode="numeric" pattern="[0-9]*">
+  </div>
+
+  <h2>ePoll Voter Count</h2>
+  <div class="card">
+    <label class="lbl">Touchpad Check-ins</label>
+    <input class="num" data-k="epoll" inputmode="numeric" pattern="[0-9]*">
+  </div>
+
+  <h2 class="sub">TOTALS: Accounting for all Voters</h2>
+  <div class="card">
+    <div class="res"><span class="k">Total Cast Ballots (Public-All)</span><span class="v" data-o="C29"></span></div>
+    <div class="res"><span class="k">Total Touchpad Check-ins / e-Poll</span><span class="v" data-o="C30"></span></div>
+    <div class="res"><span class="k">Reconciliation</span><span class="v" data-o="C31"></span></div>
+  </div>
+
+  <h2 class="sub">TOTALS: Accounting for all Ballots</h2>
+  <div class="card">
+    <div class="res"><span class="k">Total Received at Polling Location</span><span class="v" data-o="C34"></span></div>
+    <div class="res"><span class="k">Total Cast Ballots (Public)</span><span class="v" data-o="C35"></span></div>
+    <div class="res"><span class="k">Total Unused Ballots (All Types)</span><span class="v" data-o="C36"></span></div>
+    <div class="res"><span class="k">Descrepancy </span><span class="v" data-o="C37"></span></div>
+    <div class="res flag" id="adjrow"><span class="k">Adjusted for Spoiled/Provisioned<span class="badge" id="adjbadge"></span></span><span class="v" data-o="C38"></span></div>
+    <div class="note">*Ideally, want this to be zero. It would mean that spoiled and provisioned ballots accounted for the entire discrepancy</div>
+  </div>
+
+  <h2 class="sub">Personal Notes for the day</h2>
+  <div class="card">
+    <label class="lbl" for="f-notes">Personal Notes <span style="font-weight:400">(not included in Final Report)</span></label>
+    <textarea id="f-notes" autocapitalize="sentences"></textarea>
+  </div>
+
+  <h2>FINAL REPORT</h2>
+  <div class="card">
+    <label class="lbl" for="f-comments">Comments:</label>
+    <textarea id="f-comments" autocapitalize="sentences"></textarea>
+  </div>
+  <pre class="report" id="reportText"></pre>
+  <button class="primary" id="btnCopy" data-label="📋 Copy Report for Text">📋 Copy Report for Text</button>
+  <button id="btnSummary">📒 Review Spreadsheet</button>
+  <button id="btnBackBottom" class="small" style="display:none">‹ Back to Past Days</button>
+  <button id="btnNew" class="small">Start New Day</button>
+  <button id="btnDelete" class="small danger">Delete This Day</button>
+</section>
+
+<!-- ============ PAST NIGHTS ============ -->
+<section id="s-history" class="screen">
+  <h2>Past Days</h2>
+  <div id="histList"></div>
+  <button id="btnAddNight" class="small">+ Add a Missed Day (older date)</button>
+  <button id="btnTrash" class="small" style="margin-top:22px">🗑 Recently Deleted (<span id="trashN">0</span>)</button>
+</section>
+
+<!-- ============ BACKUP ============ -->
+<section id="s-backup" class="screen">
+  <h2>Download &amp; Backup</h2>
+  <div class="card" style="border-color:var(--green)">
+    <span class="lbl" style="color:var(--green)">✔ Your numbers are already saved</span>
+    <div class="hint" style="color:var(--ink)">Every number you type is saved on this phone automatically, right away. You do not have to do anything for that.</div>
+    <div class="res"><span class="k">Days saved on this phone</span><span class="v" id="bkCount">0</span></div>
+    <div class="hint" style="color:var(--ink)">The choices below save a copy <b>outside</b> this phone, in case the phone is lost, broken or replaced, or this app icon is deleted. Pick the kind of copy you want:</div>
+  </div>
+
+  <div class="card opt">
+    <span class="lbl">A. Full Backup of the App</span>
+    <div class="can">Saves all app data including daily data and comments, report summaries, and your settings all in one file. This is the <b>only</b> file that can be uploaded to restore your app.</div>
+    <div class="can" style="color:var(--muted);font-size:.8rem;margin-top:-4px">File type: .json (a data file that holds your information, not the app itself)</div>
+    <div class="res" style="padding:6px 0"><span class="k" style="font-size:.95rem">Last backup</span><span class="v" id="bkLast" style="font-size:1rem">never</span></div>
+    <button id="btnBackup">📤 Backup App</button>
+  </div>
+
+  <div class="card opt">
+    <span class="lbl">B. Export Copy of Data to Spreadsheet</span>
+    <div class="can">Export your raw data including numbers and notes. Each day will appear as its own row. File compatible with Excel, Numbers, or Google Sheets. <b>Note:</b> Downloadable content only. File can't be used to restore your app.</div>
+    <div class="can" style="color:var(--muted);font-size:.8rem;margin-top:-4px">File type: .csv (spreadsheet)</div>
+    <button id="btnCsv">📊 Export to Spreadsheet</button>
+  </div>
+
+  <div class="card opt">
+    <span class="lbl">C. Images Only</span>
+    <div class="can">Download the report summary image from all available days. Saved to your device's Photos.</div>
+    <div class="can" style="color:var(--muted);font-size:.8rem;margin-top:-4px">File type: .png (pictures)</div>
+    <button id="btnPics" data-label="🖼 Download Report Images">🖼 Download Report Images</button>
+  </div>
+
+  <div class="note">After you tap a save button, a menu opens. Choose <b>Save to Files</b> (it goes to iCloud), <b>Mail</b>, <b>Messages</b> or <b>Save Image</b>.</div>
+
+  <div class="card">
+    <span class="lbl">Restore your app</span>
+    <div class="hint" style="color:var(--ink)">Only needed on a new phone, or if your days disappear. Pick the <b>Full Backup</b> file you saved earlier (option A). Nothing is erased; the days in the file are added.</div>
+    <button id="btnRestore">📥 Restore From App Backup</button>
+    <input type="file" id="fileRestore" accept=".json,application/json" style="display:none">
+  </div>
+  <div style="margin-top:56px;padding-top:22px;border-top:3px dashed #999">
+    <button class="danger" id="btnWipe">Delete all data from application</button>
+    <div class="hint">Removes every day saved on this phone, including Recently Deleted, and starts fresh. This cannot be undone. Make a Full Backup first if you want to keep your data.</div>
+  </div>
+  <div class="note" id="storeNote"></div>
+</section>
+
+<!-- ============ SETTINGS & ABOUT ============ -->
+<section id="s-settings" class="screen">
+  <h2>Settings</h2>
+  <div class="card">
+    <label class="lbl" for="f-defsite">Default Site Name</label>
+    <div class="hint" style="margin-top:0">Used for today and every new day.</div>
+    <input class="txt site" id="f-defsite" type="text" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false">
+  </div>
+  <div class="card">
+    <span class="lbl">Text Size</span>
+    <div class="seg" id="sizeSeg">
+      <button data-size="small" style="font-size:14px">Small</button>
+      <button data-size="medium" style="font-size:15px">Medium</button>
+      <button data-size="large" style="font-size:16px">Large</button>
+      <button data-size="largest" style="font-size:17px">Largest</button>
+    </div>
+  </div>
+
+  <h2>Privacy &amp; Safety</h2>
+  <div class="card about">
+    <span class="lbl">Your data stays on this phone</span>
+    <ul>
+      <li>Every number, note and report is saved <b>only on this phone</b>, inside this app.</li>
+      <li>Nothing is ever sent to a server, a shared database, or anyone else. There are no accounts, logins, ads or tracking.</li>
+      <li>It works with <b>no internet or cell signal</b>. Internet is only needed the very first time you open it, to put it on your phone.</li>
+      <li>Data only leaves the phone if <b>you</b> choose it: when you tap Copy Report, Backup App, Export to Spreadsheet or Download Report Images, and then pick where to send it.</li>
+      <li>You can erase everything at any time with <b>Delete all data from application</b> on the Download page.</li>
+    </ul>
+  </div>
+  <div class="card about">
+    <span class="lbl">It is a calculator, nothing more</span>
+    <ul>
+      <li>It does <b>not</b> connect to voting machines, poll books, touchpads or any election system.</li>
+      <li>It does not count, change or store ballots or voter information. It only does arithmetic on the numbers <b>you</b> type in.</li>
+      <li>It does not use the camera, microphone, location or contacts.</li>
+      <li>It is not an official election tool and is not connected to any election office. Always follow your official procedures and forms. This app is just a way to double-check the math.</li>
+    </ul>
+  </div>
+  <div class="card about">
+    <span class="lbl">How the numbers are figured</span>
+    <div class="hint" style="color:var(--ink)">The same formulas as the paper worksheet:</div>
+    <div class="formula"><b>Total Cast Ballots</b> = Machine 1 Public + Machine 2 Public</div>
+    <div class="formula"><b>Reconciliation</b> = Total Cast Ballots − Touchpad Check-ins (always shown as a positive number)</div>
+    <div class="formula"><b>Total Unused Ballots</b> = Sealed + Opened</div>
+    <div class="formula"><b>Descrepancy</b> = Total Received − (Total Cast + Total Unused) (always shown as a positive number)</div>
+    <div class="formula"><b>Adjusted for Spoiled/Provisioned</b> = Descrepancy − (Provisional + Spoiled)</div>
+  </div>
+
+  <h2>About</h2>
+  <div class="card about">
+    <p>Created by <a href="https://www.backstagestrategy.com" target="_blank" rel="noopener">Backstage Strategy</a><br><a href="https://www.backstagestrategy.com" target="_blank" rel="noopener">www.backstagestrategy.com</a></p>
+    <p style="color:var(--muted);font-size:.85rem" id="verLine"></p>
+  </div>
+
+  <h2 class="sub">Version History</h2>
+  <div class="card about" id="verHistory"></div>
+</section>
+
+<div id="nextbar"><button id="nbPrev">◀ Back</button><button id="nbNext" class="go">Next ▶</button><button id="nbDone">Done</button></div>
+
+<nav class="tabs">
+  <button data-tab="tonight" class="on"><span>📝</span>Today</button>
+  <button data-tab="history"><span>🗂</span>Past Days</button>
+  <button data-tab="backup"><span>⬇️</span>Download</button>
+  <button data-tab="settings"><span>⚙️</span>Settings</button>
+</nav>
+
+<script>
+(function(){
+'use strict';
+var KEY='ballotCount.v1';
+var KEYS=['recvL','recvS','sealL','sealS','openL','openS','m1pub','m1prot','m2pub','m2prot','prov','spoil','epoll'];
+var DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+/* ===== RELEASES: to publish an update, change APP_VERSION and add a new entry at the TOP of VERSION_HISTORY ===== */
+var APP_VERSION='1.0';
+var VERSION_HISTORY=[   // newest first
+  {v:'1.0',date:'October 2026',notes:['First release.']}
+];
+var TRASH_DAYS=30, DAY_MS=864e5;
+var FONT='-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif';
+
+/* ---------- storage ---------- */
+var storageOK=true;
+function load(){
+  try{var s=localStorage.getItem(KEY); if(s) return JSON.parse(s);}catch(e){storageOK=false;}
+  return null;
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(state));storageOK=true;}catch(e){storageOK=false;}
+  updateStoreNote();
+}
+var state=load()||{records:[],trash:[],currentId:null,site:'GAX',lastBackup:null};
+if(!state.records) state.records=[];
+if(!state.trash) state.trash=[];
+var editId=null;   // set while editing a past day; null = working on today
+var cameFromHistory=false;   // true when the Today page was opened from Past Days (so a Back button is shown)
+var SIZES={small:'14px',medium:'16px',large:'18px',largest:'20px'};
+function applyTextSize(){document.documentElement.style.fontSize=SIZES[state.textSize]||SIZES.large;}
+
+/* ---------- dates & numbers ---------- */
+function p2(n){return (n<10?'0':'')+n;}
+function isoOf(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());}
+function todayISO(){return isoOf(new Date());}
+function parseISO(s){var a=s.split('-');return new Date(+a[0],+a[1]-1,+a[2]);}
+function ordinal(n){var m=n%100;if(m>=11&&m<=13)return n+'th';switch(n%10){case 1:return n+'st';case 2:return n+'nd';case 3:return n+'rd';}return n+'th';}
+function niceDate(iso){if(!iso)return '';var d=parseISO(iso);return DAYS[d.getDay()]+' '+MONTHS[d.getMonth()]+' '+ordinal(d.getDate());}
+function addCommas(s){return String(s).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+function fmt(v){return (v===null||v===undefined||v==='')?'':addCommas(v);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ---------- records ---------- */
+function newRecord(){
+  var v={};KEYS.forEach(function(k){v[k]='';});
+  return {id:'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),date:todayISO(),site:state.site||'GAX',v:v,comments:'',notes:'',updated:Date.now()};
+}
+function hasData(r){return KEYS.some(function(k){return r.v[k]!=='';})||(r.comments||'').trim()!==''||(r.notes||'').trim()!=='';}
+function byId(id){return state.records.filter(function(x){return x.id===id;})[0];}
+function tonightRec(){
+  var r=byId(state.currentId);
+  if(!r){r=newRecord();state.records.push(r);state.currentId=r.id;save();}
+  return r;
+}
+function cur(){
+  if(editId){var e=byId(editId);if(e)return e;editId=null;}
+  return tonightRec();
+}
+function sorted(){return state.records.slice().sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:b.updated-a.updated;});}
+function purgeTrash(){
+  var n=state.trash.length;
+  state.trash=state.trash.filter(function(t){return Date.now()-t.deletedAt<TRASH_DAYS*DAY_MS;});
+  if(state.trash.length!==n)save();
+}
+
+/* ---------- the sheet's math (blank until there is an input behind it) ---------- */
+function has(r,k){return r.v[k]!=='';}
+function num(r,k){return has(r,k)?parseInt(r.v[k],10):0;}
+function anyOf(r,ks){return ks.some(function(k){return has(r,k);});}
+function calc(r){
+  var o={};
+  o.C6 =anyOf(r,['recvL','recvS'])? num(r,'recvL')+num(r,'recvS'):null;       // =SUM(D6+E6)
+  o.C9 =anyOf(r,['sealL','sealS'])? num(r,'sealL')+num(r,'sealS'):null;       // =SUM(D9+E9)
+  o.C10=anyOf(r,['openL','openS'])? num(r,'openL')+num(r,'openS'):null;       // =SUM(D10+E10)
+  o.C29=anyOf(r,['m1pub','m2pub'])? num(r,'m1pub')+num(r,'m2pub'):null;       // =SUM(C13+C17)
+  o.C30=has(r,'epoll')? num(r,'epoll'):null;                                  // =C24
+  o.C31=(o.C29!==null&&o.C30!==null)? Math.abs(o.C29-o.C30):null;             // =ABS(C29-C30)
+  o.C34=o.C6;                                                                 // =C6
+  o.C35=o.C29;                                                                // =SUM(C13,C17)
+  o.C36=anyOf(r,['sealL','sealS','openL','openS'])? (o.C9||0)+(o.C10||0):null;// =SUM(C9:C10)
+  o.C37=(o.C34!==null&&o.C35!==null&&o.C36!==null)? Math.abs(o.C34-(o.C35+o.C36)):null; // =ABS(C34-(C35+C36))
+  o.C38=(o.C37!==null)? o.C37-(num(r,'prov')+num(r,'spoil')):null;            // =C37-SUM(C21:C22)
+  return o;
+}
+
+/* ---------- report text (rows 43-50 of the sheet; personal notes are NOT included) ---------- */
+function reportText(r){
+  var o=calc(r);
+  return [
+    niceDate(r.date)+' Report',
+    'Site Name: '+(r.site||''),
+    'DS300 1 / DS200 1 Public Count: '+fmt(r.v.m1pub),
+    'DS300 2 / DS200 2 Public Count: '+fmt(r.v.m2pub),
+    'Touchpad Regular Check-In Total: '+fmt(r.v.epoll),
+    'Reconciliation: '+fmt(o.C31),
+    'Unused Ballots: '+fmt(o.C36),
+    'Comments: '+(r.comments||'')
+  ].join('\n');
+}
+
+/* ---------- helpers ---------- */
+var $=function(s,root){return (root||document).querySelector(s);};
+var $$=function(s,root){return Array.prototype.slice.call((root||document).querySelectorAll(s));};
+function toast(msg){
+  var t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);
+  setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},2800);
+}
+function ago(ms){var d=Math.floor((Date.now()-ms)/DAY_MS);return d<=0?'today':d===1?'1 day ago':d+' days ago';}
+
+/* ---------- main form ---------- */
+function renderInputs(){
+  var r=cur();
+  $$('input.num').forEach(function(el){var v=r.v[el.dataset.k];el.value=fmt(v);el.classList.toggle('filled',v!=='');});
+  $('#f-date').value=r.date;
+  $('#f-site').value=r.site;
+  $('#f-notes').value=r.notes||'';
+  $('#f-comments').value=r.comments||'';
+  refresh();
+}
+function refresh(){
+  var r=cur(), o=calc(r);
+  $$('[data-o]').forEach(function(el){el.textContent=fmt(o[el.dataset.o]);});
+  $('[data-o=C31]').classList.toggle('red',o.C31!==null&&o.C31!==0);
+  var row=$('#adjrow'), badge=$('#adjbadge');
+  row.className='res flag'; badge.textContent='';
+  if(o.C38!==null){
+    if(o.C38===0){row.classList.add('zero');badge.textContent='✔ Zero – everything is accounted for';}
+    else{row.classList.add('nz');badge.textContent='Not zero yet';}
+  } else {row.className='res';}
+  $('#reportText').textContent=reportText(r);
+  var ed=!!editId, back=ed||cameFromHistory;
+  $('#hdrBack').style.display=back?'':'none';
+  $('#btnBackBottom').style.display=back?'':'none';
+  $('#hdrTitle').textContent=ed?('Editing '+niceDate(r.date)):('Ballot Counter – '+niceDate(r.date));
+  $('#btnNew').style.display=ed?'none':'';
+  renderBanners();
+  // small red dot on the Save Copy tab if no Full Backup for over a week (takes no room on the page)
+  var any=state.records.some(hasData);
+  var stale=!state.lastBackup||(Date.now()-state.lastBackup>7*DAY_MS);
+  $('nav.tabs button[data-tab=backup]').classList.toggle('dot',any&&stale);
+}
+function touch(){var r=cur();r.updated=Date.now();save();}
+
+function renderBanners(){
+  var b=$('#banners'),h='',r=cur();
+  if(editId||cameFromHistory){h+='<button class="primary small" id="bnBack" style="margin:0 0 12px">‹ Back to Past Days</button>';}
+  if(editId){
+    h+='<div class="banner">You are looking at a past day. Changes save by themselves. Tap <b>‹ Back</b> when you are done.</div>';
+  } else if(r.date!==todayISO()&&hasData(r)){
+    h+='<div class="banner">This is the report for '+niceDate(r.date)+', not today.<button class="primary small" id="bnNew">Start New Day</button></div>';
+  }
+  if(!storageOK){h+='<div class="banner">⚠ This phone is not letting the app save. Your numbers will be lost if you close it. Please save a copy often, and text the report each day.</div>';}
+  b.innerHTML=h;
+  var a=$('#bnNew');if(a)a.onclick=startNew;
+  var bk=$('#bnBack');if(bk)bk.onclick=function(){switchTab('history');};
+}
+
+/* ---------- inputs ---------- */
+$$('input.num').forEach(function(el){
+  el.addEventListener('input',function(){
+    var raw=el.value, caret=el.selectionStart==null?raw.length:el.selectionStart;
+    var digitsBefore=raw.slice(0,caret).replace(/\D/g,'').length;
+    var clean=raw.replace(/\D/g,'').slice(0,7).replace(/^0+(?=\d)/,'');
+    var shown=addCommas(clean);
+    el.value=shown;
+    var pos=0,cnt=0;
+    while(pos<shown.length&&cnt<digitsBefore){if(/\d/.test(shown.charAt(pos)))cnt++;pos++;}
+    try{el.setSelectionRange(pos,pos);}catch(e){}
+    el.classList.toggle('filled',clean!=='');
+    cur().v[el.dataset.k]=clean; touch(); refresh();
+  });
+  el.addEventListener('focus',function(){
+    setTimeout(function(){
+      if(document.activeElement!==el)return;   // never steal focus from a newer field
+      try{el.select();}catch(e){}
+      el.scrollIntoView({block:'center',behavior:'smooth'});
+    },50);
+  });
+});
+$('#f-date').addEventListener('change',function(e){if(e.target.value){cur().date=e.target.value;touch();refresh();}});
+$('#f-site').addEventListener('input',function(e){var r=cur();r.site=e.target.value;state.site=e.target.value;touch();refresh();});
+$('#f-comments').addEventListener('input',function(e){cur().comments=e.target.value;touch();refresh();});
+$('#f-notes').addEventListener('input',function(e){cur().notes=e.target.value;touch();});
+
+/* Back / Next bar above the keyboard (the iPhone number pad has no Return key) */
+var nums=$$('input.num'), nb=$('#nextbar'), focused=null;
+function placeBar(){
+  var vv=window.visualViewport;
+  if(!focused||document.activeElement!==focused){nb.style.display='none';return;}
+  if(!vv){nb.style.display='grid';nb.style.bottom='0';return;}
+  var kb=window.innerHeight-vv.height-vv.offsetTop;
+  if(window.innerHeight-vv.height>120){nb.style.display='grid';nb.style.bottom=Math.max(0,kb)+'px';}
+  else{nb.style.display='none';}
+}
+nums.forEach(function(el){
+  el.addEventListener('focus',function(){focused=el;placeBar();});
+  el.addEventListener('blur',function(){setTimeout(function(){if(!document.activeElement||document.activeElement.className.indexOf('num')<0){nb.style.display='none';}},120);});
+});
+if(window.visualViewport){visualViewport.addEventListener('resize',placeBar);visualViewport.addEventListener('scroll',placeBar);}
+function step(d){var i=nums.indexOf(focused);var n=nums[i+d];if(n)n.focus();else if(document.activeElement)document.activeElement.blur();}
+['nbPrev','nbNext','nbDone'].forEach(function(id){$('#'+id).addEventListener('mousedown',function(e){e.preventDefault();});});
+$('#nbPrev').onclick=function(){step(-1);};
+$('#nbNext').onclick=function(){step(1);};
+$('#nbDone').onclick=function(){if(document.activeElement)document.activeElement.blur();nb.style.display='none';};
+
+/* ---------- modal helper ---------- */
+// buttons: {t,c,v,fn,keep,delay}; v may be a function; onMount(modalEl, close) can wire up custom content
+function modal(html,buttons,cls,onMount){
+  return new Promise(function(res){
+    var bg=document.createElement('div');bg.className='modalbg';
+    var m=document.createElement('div');m.className='modal'+(cls?' '+cls:'');m.innerHTML=html;
+    function onKey(e){if(e.key==='Escape')close(null);}
+    function close(val){document.removeEventListener('keydown',onKey);if(bg.parentNode)bg.parentNode.removeChild(bg);res(val);}
+    var x=document.createElement('button');x.className='xclose';x.setAttribute('aria-label','Close');x.textContent='✕';x.onclick=function(){close(null);};
+    document.addEventListener('keydown',onKey);
+    buttons.forEach(function(b){
+      var el=document.createElement('button');el.textContent=b.t;el.className=b.c||'';
+      if(b.delay){el.disabled=true;setTimeout(function(){el.disabled=false;},b.delay);}
+      el.onclick=function(){
+        if(b.fn)b.fn(el);
+        if(b.keep)return;
+        close((typeof b.v==='function')?b.v():b.v);
+      };
+      m.appendChild(el);
+    });
+    bg.appendChild(x);bg.appendChild(m);document.body.appendChild(bg);
+    if(onMount)onMount(m,close);
+  });
+}
+
+/* ---------- copy report (stays on this page) ---------- */
+function copyText(t){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    return navigator.clipboard.writeText(t).then(function(){return true;},function(){return legacyCopy(t);});
+  }
+  return Promise.resolve(legacyCopy(t));
+}
+function legacyCopy(t){
+  try{
+    var ta=document.createElement('textarea');ta.value=t;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.top='0';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.focus();ta.select();ta.setSelectionRange(0,t.length);
+    var ok=document.execCommand('copy');document.body.removeChild(ta);return ok;
+  }catch(e){return false;}
+}
+var copyTimer=null;
+$('#btnCopy').onclick=function(){
+  var btn=$('#btnCopy'),label=btn.getAttribute('data-label');
+  copyText(reportText(cur())).then(function(ok){
+    if(!ok){
+      modal('<h3>Could not copy automatically</h3><p>Press and hold on the report text on the screen, choose <b>Select All</b>, then <b>Copy</b>.</p>',[{t:'OK',c:'primary',v:1}]);
+      return;
+    }
+    btn.textContent='✔ Copied! Now paste it into a text';
+    clearTimeout(copyTimer);copyTimer=setTimeout(function(){btn.textContent=label;},4000);
+  });
+};
+$('#btnSummary').onclick=function(){showSummary(cur());};
+
+/* ---------- Review Spreadsheet: one list of rows, drawn as a table and as a picture ---------- */
+function ledgerRows(r){
+  var o=calc(r),v=r.v,red=(o.C31!==null&&o.C31!==0);
+  return [
+    {k:'head'},
+    {k:'tri',l:'Total Received by Polling Location',a:v.recvL,b:v.recvS,c:o.C6},
+    {k:'sec',l:'Unused Ballots'},
+    {k:'tri',l:'Sealed - Never Opened',a:v.sealL,b:v.sealS,c:o.C9},
+    {k:'tri',l:'Opened - Not Used',a:v.openL,b:v.openS,c:o.C10},
+    {k:'sec',l:'Ballots Used: Machine 1'},
+    {k:'one',l:'Machine 1 - Public',c:v.m1pub},
+    {k:'one',l:'Machine 1 - Protected Count',c:v.m1prot},
+    {k:'sec',l:'Ballots Used: Machine 2'},
+    {k:'one',l:'Machine 2 - Public',c:v.m2pub},
+    {k:'one',l:'Machine 2 - Protected Count',c:v.m2prot},
+    {k:'sec',l:'Ballots, Other'},
+    {k:'one',l:'Provisional',c:v.prov},
+    {k:'one',l:'Spoiled',c:v.spoil},
+    {k:'sec',l:'ePoll Voter Count'},
+    {k:'one',l:'Touchpad Check-ins',c:v.epoll},
+    {k:'sec',l:'TOTALS: Accounting for all Voters'},
+    {k:'one',l:'Total Cast Ballots (Public-All)',c:o.C29},
+    {k:'one',l:'Total Touchpad Check-ins / e-Poll',c:o.C30},
+    {k:'one',l:'Reconciliation',c:o.C31,red:red},
+    {k:'sec',l:'TOTALS: Accounting for all Ballots'},
+    {k:'one',l:'Total Received at Polling Location',c:o.C34},
+    {k:'one',l:'Total Cast Ballots (Public)',c:o.C35},
+    {k:'one',l:'Total Unused Ballots (All Types)',c:o.C36},
+    {k:'one',l:'Descrepancy',c:o.C37},
+    {k:'one',l:'Adjusted for Spoiled/Provisioned',c:o.C38}
+  ];
+}
+function ledgerTitle(r){return niceDate(r.date)+' Report – '+(r.site||'');}
+
+function wrapLines(ctx,text,maxW){
+  var out=[];
+  String(text).split('\n').forEach(function(par){
+    var words=par.split(' '),line='';
+    words.forEach(function(w){
+      var t=line?line+' '+w:w;
+      if(ctx.measureText(t).width>maxW&&line){out.push(line);line=w;}else line=t;
+    });
+    out.push(line);
+  });
+  return out;
+}
+function fitFont(x,text,weight,size,maxW){
+  var sz=size;x.font=weight+' '+sz+'px '+FONT;
+  while(x.measureText(text).width>maxW&&sz>13){sz-=1;x.font=weight+' '+sz+'px '+FONT;}
+}
+function ledgerCanvas(r){
+  var rows=ledgerRows(r),S=2,W=900,pad=28,rh=46,titleH=84;
+  var meas=document.createElement('canvas').getContext('2d');
+  var cl=[];
+  if(r.comments){meas.font='500 26px '+FONT;cl=wrapLines(meas,'Comments: '+r.comments,W-2*pad);}
+  var H=pad+titleH+rows.length*rh+(cl.length?18+cl.length*34:0)+pad;
+  var c=document.createElement('canvas');c.width=W*S;c.height=H*S;
+  var x=c.getContext('2d');x.scale(S,S);
+  x.fillStyle='#fff';x.fillRect(0,0,W,H);
+  var title=ledgerTitle(r);
+  fitFont(x,title,'800',34,W-2*pad);
+  x.fillStyle='#111';x.textBaseline='middle';x.textAlign='left';x.fillText(title,pad,pad+titleH/2);
+  var L=pad,R=W-pad,x1=422,x2=572,x3=722,y=pad+titleH;
+  rows.forEach(function(row){
+    var mid=y+rh/2;
+    if(row.k==='sec'){
+      x.fillStyle='#1b3a6b';x.fillRect(L,y,R-L,rh);x.fillStyle='#fff';x.textAlign='left';
+      fitFont(x,row.l,'800',24,R-L-24);x.fillText(row.l,L+12,mid);
+    } else if(row.k==='head'){
+      x.fillStyle='#e4e8f0';x.fillRect(L,y,R-L,rh);x.fillStyle='#111';x.textAlign='right';
+      [['Large Ballot',x2],['Small Card',x3],['TOTAL',R]].forEach(function(h){fitFont(x,h[0],'800',21,138);x.fillText(h[0],h[1]-12,mid);});
+    } else if(row.k==='tri'){
+      x.fillStyle='#111';x.textAlign='left';fitFont(x,row.l,'500',24,x1-L-24);x.fillText(row.l,L+12,mid);
+      x.textAlign='right';x.font='500 24px '+FONT;x.fillText(fmt(row.a),x2-12,mid);x.fillText(fmt(row.b),x3-12,mid);
+      x.font='800 24px '+FONT;x.fillText(fmt(row.c),R-12,mid);
+    } else {
+      x.fillStyle='#111';x.textAlign='left';fitFont(x,row.l,'500',24,R-L-170);x.fillText(row.l,L+12,mid);
+      x.fillStyle=row.red?'#c00000':'#111';x.font='800 24px '+FONT;x.textAlign='right';x.fillText(fmt(row.c),R-12,mid);
+    }
+    x.strokeStyle='#666';x.lineWidth=1;x.strokeRect(L+.5,y+.5,R-L-1,rh);
+    if(row.k==='tri'||row.k==='head'){
+      [x1,x2,x3].forEach(function(vx){x.beginPath();x.moveTo(vx+.5,y);x.lineTo(vx+.5,y+rh);x.stroke();});
+    }
+    y+=rh;
+  });
+  if(cl.length){
+    x.fillStyle='#111';x.font='500 26px '+FONT;x.textAlign='left';x.textBaseline='top';
+    cl.forEach(function(line,i){x.fillText(line,pad,y+18+i*34);});
+  }
+  return c;
+}
+function ledgerFile(r){
+  return new Promise(function(res){
+    ledgerCanvas(r).toBlob(function(b){
+      var name='ballot-summary-'+r.date+'.png';
+      try{res(new File([b],name,{type:'image/png'}));}catch(e){b.name=name;res(b);}
+    },'image/png');
+  });
+}
+function showSummary(r){
+  var html='<h3>'+esc(ledgerTitle(r))+'</h3><table class="sum"><colgroup><col style="width:40%"><col style="width:20%"><col style="width:20%"><col style="width:20%"></colgroup>';
+  ledgerRows(r).forEach(function(w){
+    if(w.k==='head')html+='<tr><th></th><th>Large Ballot</th><th>Small Card</th><th>TOTAL</th></tr>';
+    else if(w.k==='tri')html+='<tr><td>'+w.l+'</td><td>'+fmt(w.a)+'</td><td>'+fmt(w.b)+'</td><td class="b">'+fmt(w.c)+'</td></tr>';
+    else if(w.k==='sec')html+='<tr class="sec"><td colspan="4">'+w.l+'</td></tr>';
+    else if(w.k==='one')html+='<tr><td colspan="3">'+w.l+'</td><td class="b'+(w.red?' red':'')+'">'+fmt(w.c)+'</td></tr>';
+  });
+  html+='</table>'+(r.comments?'<p style="margin:6px 0 0;font-size:.85rem"><b>Comments:</b> '+esc(r.comments)+'</p>':'');
+  var ready=null,pending=ledgerFile(r).then(function(f){ready=f;return f;});   // made ahead so the tap can share right away
+  modal(html,[
+    {t:'🖼 Save Image',c:'primary',keep:true,fn:function(){
+      (ready?Promise.resolve(ready):pending).then(function(file){saveOneImage(file);});
+    }},
+    {t:'Done',v:1}
+  ],'compact');
+  // little hint under the button
+}
+function saveOneImage(file){
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    navigator.share({files:[file]}).catch(function(){});       // iPhone menu: tap "Save Image" to put it in Photos
+  } else {
+    var url=URL.createObjectURL(file);
+    modal('<h3>Save the picture</h3><p style="font-size:.95rem">Press and hold the picture, then tap <b>Add to Photos</b> (or <b>Save Image</b>).</p><img src="'+url+'" alt="Summary table">',[{t:'Close',c:'primary',v:1}]).then(function(){URL.revokeObjectURL(url);});
+  }
+}
+function showReport(r){
+  var t=reportText(r);
+  modal('<h3>'+niceDate(r.date)+' Report</h3><pre class="report">'+esc(t)+'</pre>',[
+    {t:'📋 Copy Report for Text',c:'primary',keep:true,fn:function(el){copyText(t).then(function(ok){el.textContent=ok?'✔ Copied – paste into a text':'Press and hold the text to copy';});}},
+    {t:'Close',v:1}
+  ]);
+}
+
+/* ---------- new night / delete (deleted nights wait 30 days in Recently Deleted) ---------- */
+function startNew(){
+  if(editId)return;
+  var r=tonightRec();
+  if(!hasData(r)){ r.date=todayISO();r.site=state.site||r.site;save();renderInputs();window.scrollTo(0,0);return; }
+  modal('<h3>Start a new day?</h3><p>'+niceDate(r.date)+' stays saved in <b>Past Days</b>. The yellow boxes will be emptied for the new day.</p>',
+    [{t:'Yes, Start New Day',c:'primary',v:true},{t:'No, Keep Going',v:false}]).then(function(y){
+      if(!y)return;
+      var n=newRecord();state.records.push(n);state.currentId=n.id;save();renderInputs();window.scrollTo(0,0);
+    });
+}
+$('#btnNew').onclick=startNew;
+$('#btnDelete').onclick=function(){
+  var r=cur();
+  modal('<h3>Delete '+niceDate(r.date)+'?</h3><p>It moves to <b>Recently Deleted</b> and stays there for 30 days, so you can put it back. After that it is gone for good.</p>',
+    [{t:'No, Keep It',c:'primary',v:false},
+     {t:'Yes, Delete This Day',c:'danger gap',v:true,delay:900}]).then(function(y){
+    if(!y)return;
+    var wasEdit=!!editId||cameFromHistory;
+    state.records=state.records.filter(function(x){return x.id!==r.id;});
+    if(hasData(r)){r.deletedAt=Date.now();state.trash.push(r);}
+    if(state.currentId===r.id)state.currentId=null;
+    editId=null;save();renderInputs();
+    toast('Moved to Recently Deleted (kept 30 days)');
+    if(wasEdit)switchTab('history');else window.scrollTo(0,0);
+  });
+};
+function showTrash(){
+  purgeTrash();
+  var list=state.trash.slice().sort(function(a,b){return b.deletedAt-a.deletedAt;});
+  if(!list.length){
+    modal('<h3>Recently Deleted</h3><p>Nothing here. A day you delete stays here for 30 days before it is removed for good.</p>',[{t:'Close',c:'primary',v:1}]);
+    return;
+  }
+  var html='<h3>Recently Deleted</h3><p style="font-size:.9rem">Deleted days stay here for 30 days, then are removed for good.</p>';
+  list.forEach(function(t){
+    var left=Math.max(0,TRASH_DAYS-Math.floor((Date.now()-t.deletedAt)/DAY_MS));
+    html+='<div class="trashrow"><b>'+niceDate(t.date)+'</b><br><span style="font-size:.85rem;color:var(--muted)">'+esc(t.site)+' · deleted '+ago(t.deletedAt)+' · '+left+' days left</span><button class="small" data-put="'+esc(t.id)+'">↩ Put Back</button></div>';
+  });
+  modal(html,[{t:'Close',c:'primary',v:1}],null,function(m,close){
+    $$('[data-put]',m).forEach(function(b){b.onclick=function(){
+      var id=b.getAttribute('data-put'),t=state.trash.filter(function(x){return x.id===id;})[0];
+      if(!t)return;
+      state.trash=state.trash.filter(function(x){return x.id!==id;});
+      delete t.deletedAt;t.updated=Date.now();state.records.push(t);save();
+      close(1);toast('Put back: '+niceDate(t.date));renderHistory();
+    };});
+  });
+}
+$('#btnTrash').onclick=showTrash;
+
+/* ---------- past nights ---------- */
+function openEdit(id){
+  cameFromHistory=true;
+  editId=(id===state.currentId)?null:id;
+  renderInputs();switchTab('tonight',true);
+}
+function leaveEdit(){
+  if(!editId)return;
+  var e=byId(editId);
+  if(e&&!hasData(e)&&e.id!==state.currentId){state.records=state.records.filter(function(x){return x.id!==e.id;});save();}
+  editId=null;renderInputs();
+}
+$('#hdrBack').onclick=function(){switchTab('history');};
+$('#btnBackBottom').onclick=function(){switchTab('history');};
+
+function renderHistory(){
+  purgeTrash();
+  $('#trashN').textContent=state.trash.length;
+  var L=$('#histList'),list=sorted().filter(function(r){return hasData(r)||r.id===state.currentId;});
+  if(!list.length){L.innerHTML='<div class="card">No days saved yet.</div>';return;}
+  L.innerHTML='';
+  list.forEach(function(r){
+    var o=calc(r),c=document.createElement('div');c.className='card night';
+    var sum=[];
+    if(o.C29!==null)sum.push('Cast '+fmt(o.C29));
+    if(o.C36!==null)sum.push('Unused '+fmt(o.C36));
+    if(o.C31!==null)sum.push('Reconciliation '+fmt(o.C31));
+    c.innerHTML='<div class="t">'+niceDate(r.date)+(r.id===state.currentId?' <span style="color:var(--green);font-size:.8em">(today)</span>':'')+'</div><div class="s">'+esc(r.site)+(sum.length?' · '+sum.join(' · '):' · (empty)')+'</div>';
+    var bar=document.createElement('div');bar.className='nbtns';
+    function btn(t,cls,fn){var b=document.createElement('button');b.textContent=t;b.className=cls||'';b.onclick=fn;bar.appendChild(b);}
+    btn('View Summary Table','primary',function(){showSummary(r);});
+    btn('View Report','',function(){showReport(r);});
+    btn('Edit','',function(){openEdit(r.id);});
+    c.appendChild(bar);L.appendChild(c);
+  });
+}
+$('#btnAddNight').onclick=function(){
+  var y=new Date();y.setDate(y.getDate()-1);
+  modal('<h3>Add a missed day</h3><p>Pick the date of the day you want to fill in.</p><input class="date" type="date" id="mDate" value="'+isoOf(y)+'" max="'+todayISO()+'">',
+    [{t:'Add This Day',c:'primary',v:function(){return document.getElementById('mDate').value;}},{t:'Cancel',v:null}]).then(function(d){
+      if(!d)return;
+      if(tonightRec().date===d){switchTab('tonight');return;}
+      var ex=state.records.filter(function(r){return r.date===d&&hasData(r);})[0];
+      if(ex){
+        modal('<h3>You already have that day</h3><p>'+niceDate(d)+' is already saved. Opening it so you can look at it or change it.</p>',[{t:'OK',c:'primary',v:1}]).then(function(){openEdit(ex.id);});
+        return;
+      }
+      var n=newRecord();n.date=d;state.records.push(n);save();openEdit(n.id);
+    });
+};
+
+/* ---------- Save Copy: A) everything  B) spreadsheet  C) pictures ---------- */
+function downloadFile(file){
+  var a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name||'file';document.body.appendChild(a);a.click();
+  setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(a.href);},1000);
+}
+function shareOrDownload(files,title){
+  if(navigator.canShare&&navigator.canShare({files:files})){
+    return navigator.share({files:files,title:title}).then(function(){return 'shared';},function(e){return (e&&e.name==='AbortError')?'cancelled':'failed';});
+  }
+  files.forEach(function(f,i){setTimeout(function(){downloadFile(f);},i*400);});
+  return Promise.resolve('downloaded');
+}
+function mkFile(text,name,type){
+  var blob=new Blob([text],{type:type});
+  try{return new File([blob],name,{type:type});}catch(e){blob.name=name;return blob;}
+}
+
+// A) everything — the only one the app can read back
+function everythingJSON(){
+  return JSON.stringify({app:'ballot-counter',version:2,appVersion:APP_VERSION,exported:new Date().toISOString(),site:state.site,
+    records:state.records.filter(hasData),trash:state.trash},null,1);
+}
+$('#btnBackup').onclick=function(){
+  var file=mkFile(everythingJSON(),'ballot-app-backup-'+todayISO()+'.json','application/json');
+  shareOrDownload([file],'Ballot Counter app backup').then(function(res){
+    if(res==='shared'||res==='downloaded'){state.lastBackup=Date.now();save();renderBackup();refresh();}
+  });
+};
+
+// B) spreadsheet of the numbers (.csv)
+function csvCell(v){v=(v==null?'':String(v));return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function numsCSV(){
+  var head=['Date','Site Name','Received - Large Ballot','Received - Small Card','Received - Total',
+    'Sealed - Never Opened - Large Ballot','Sealed - Never Opened - Small Card','Sealed - Never Opened - Total',
+    'Opened - Not Used - Large Ballot','Opened - Not Used - Small Card','Opened - Not Used - Total',
+    'Machine 1 - Public','Machine 1 - Protected Count','Machine 2 - Public','Machine 2 - Protected Count',
+    'Provisional','Spoiled','Touchpad Check-ins',
+    'Total Cast Ballots (Public-All)','Reconciliation','Total Unused Ballots (All Types)','Descrepancy','Adjusted for Spoiled/Provisioned',
+    'Comments','Personal Notes'];
+  var rows=state.records.filter(hasData).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.updated-b.updated;}).map(function(r){
+    var o=calc(r),v=r.v;
+    return [r.date,r.site,v.recvL,v.recvS,o.C6,v.sealL,v.sealS,o.C9,v.openL,v.openS,o.C10,v.m1pub,v.m1prot,v.m2pub,v.m2prot,v.prov,v.spoil,v.epoll,
+      o.C29,o.C31,o.C36,o.C37,o.C38,r.comments,r.notes];
+  });
+  return '﻿'+[head].concat(rows).map(function(row){return row.map(csvCell).join(',');}).join('\r\n');
+}
+$('#btnCsv').onclick=function(){
+  if(!state.records.some(hasData)){modal('<h3>Nothing to save yet</h3><p>Enter a day first.</p>',[{t:'OK',c:'primary',v:1}]);return;}
+  shareOrDownload([mkFile(numsCSV(),'ballot-numbers-'+todayISO()+'.csv','text/csv')],'Ballot Counter numbers');
+};
+
+// C) pictures: make them first, then a fresh tap saves them (iPhone needs a new tap to open its menu)
+$('#btnPics').onclick=function(){
+  var btn=$('#btnPics'),label=btn.getAttribute('data-label');
+  var list=state.records.filter(hasData).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.updated-b.updated;});
+  if(!list.length){modal('<h3>Nothing to save yet</h3><p>Enter a day first.</p>',[{t:'OK',c:'primary',v:1}]);return;}
+  btn.disabled=true;btn.textContent='Preparing images…';
+  var files=[];
+  list.reduce(function(p,r,i){return p.then(function(){return ledgerFile(r).then(function(f){
+    if(f.name&&files.some(function(x){return x.name===f.name;})){try{f=new File([f],f.name.replace('.png','-'+(i+1)+'.png'),{type:'image/png'});}catch(e){}}
+    files.push(f);});});},Promise.resolve()).then(function(){
+    btn.disabled=false;btn.textContent=label;
+    modal('<h3>✔ '+files.length+' report image'+(files.length===1?' is':'s are')+' ready</h3><p>Tap <b>Download Report Images</b>. A menu opens: choose <b>Save Image</b> to put them in your Photos.</p>',[
+      {t:'Download Report Images',c:'primary',v:true},{t:'Cancel',v:false}]).then(function(go){
+        if(go)shareOrDownload(files,'Ballot Counter pictures');
+      });
+  });
+};
+
+// restore (from option A)
+$('#btnWipe').onclick=function(){
+  modal('<h3>Delete all data?</h3><p>This removes <b>all '+state.records.filter(hasData).length+' saved day(s)</b> and everything in Recently Deleted from this phone. It cannot be undone unless you made a Full Backup first.</p>',
+    [{t:'No, Keep Everything',c:'primary',v:false},{t:'Yes, Delete All Data',c:'danger gap',v:true,delay:1500}]).then(function(y){
+      if(!y)return;
+      state={records:[],trash:[],currentId:null,site:'GAX',lastBackup:null};editId=null;cameFromHistory=false;applyTextSize();
+      try{localStorage.removeItem(KEY);}catch(e){}
+      tonightRec();save();renderInputs();renderBackup();switchTab('tonight');toast('All data deleted. Starting fresh.');
+    });
+};
+$('#btnRestore').onclick=function(){$('#fileRestore').click();};
+$('#fileRestore').addEventListener('change',function(e){
+  var fl=e.target.files[0];if(!fl)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{
+      var d=JSON.parse(rd.result);
+      if(!d||!Array.isArray(d.records))throw new Error('bad');
+      var added=0,updated=0,hadData=state.records.some(hasData);
+      function norm(r){KEYS.forEach(function(k){if(typeof r.v[k]!=='string')r.v[k]=r.v[k]==null?'':String(r.v[k]);});if(r.notes==null)r.notes='';if(r.comments==null)r.comments='';}
+      d.records.forEach(function(r){
+        if(!r||!r.id||!r.v||!r.date)return;
+        norm(r);
+        var ex=byId(r.id);
+        if(!ex){state.records.push(r);added++;}
+        else if((r.updated||0)>(ex.updated||0)){state.records[state.records.indexOf(ex)]=r;updated++;}
+      });
+      (d.trash||[]).forEach(function(t){
+        if(!t||!t.id||!t.v||!t.date||!t.deletedAt)return;
+        if(byId(t.id)||state.trash.some(function(x){return x.id===t.id;}))return;
+        norm(t);state.trash.push(t);
+      });
+      if(!hadData&&d.site)state.site=d.site;
+      purgeTrash();save();renderInputs();renderBackup();
+      modal('<h3>✔ Days restored</h3><p>'+added+' day(s) added'+(updated?', '+updated+' updated':'')+'. You can see them in <b>Past Days</b>.</p>',[{t:'OK',c:'primary',v:1}]);
+    }catch(err){modal('<h3>That file did not work</h3><p>Please pick a <b>Full Backup</b> file made by this app (the file ends in .json).</p>',[{t:'OK',c:'primary',v:1}]);}
+    e.target.value='';
+  };
+  rd.readAsText(fl);
+});
+function renderBackup(){
+  $('#bkCount').textContent=state.records.filter(hasData).length;
+  $('#bkLast').textContent=state.lastBackup?new Date(state.lastBackup).toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'never';
+  updateStoreNote();
+}
+function updateStoreNote(){
+  var n=$('#storeNote');if(!n)return;
+  n.textContent=storageOK?'Your numbers never leave this phone unless you save a copy or text the report.':'⚠ Saving is not working on this phone.';
+}
+
+/* ---------- settings ---------- */
+function renderSettings(){
+  $('#verLine').textContent='Ballot Counter · version '+APP_VERSION;
+  $('#verHistory').innerHTML=VERSION_HISTORY.map(function(h){
+    return '<span class="lbl" style="margin-top:4px">Version '+esc(h.v)+' <span style="font-weight:400;font-size:.85em;color:var(--muted)">· '+esc(h.date)+'</span></span><ul>'+h.notes.map(function(n){return '<li>'+esc(n)+'</li>';}).join('')+'</ul>';
+  }).join('');
+  $('#f-defsite').value=state.site||'';
+  $$('#sizeSeg button').forEach(function(b){b.classList.toggle('on',b.dataset.size===(SIZES[state.textSize]?state.textSize:'large'));});
+}
+$('#f-defsite').addEventListener('input',function(e){
+  state.site=e.target.value;
+  tonightRec().site=e.target.value;
+  save();
+});
+$$('#sizeSeg button').forEach(function(b){b.onclick=function(){state.textSize=b.dataset.size;save();applyTextSize();renderSettings();};});
+
+/* ---------- tabs ---------- */
+function switchTab(t,keepEdit){
+  if(!keepEdit){var was=cameFromHistory;cameFromHistory=false;leaveEdit();if(was)refresh();}
+  if(t==='tonight'&&!keepEdit)renderInputs();
+  $$('.screen').forEach(function(s){s.classList.remove('on');});
+  $('#s-'+t).classList.add('on');
+  $$('nav.tabs button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===t);});
+  if(t==='history')renderHistory();
+  if(t==='backup')renderBackup();
+  if(t==='settings')renderSettings();
+  if(t!=='tonight'){nb.style.display='none';}
+  window.scrollTo(0,0);
+}
+$$('nav.tabs button').forEach(function(b){b.onclick=function(){switchTab(b.dataset.tab);};});
+
+/* ---------- "what's new" notice after an update ---------- */
+function checkUpdateNotice(){
+  var seen=state.seenVersion;
+  if(seen===APP_VERSION)return;
+  state.seenVersion=APP_VERSION;save();
+  if(!seen)return;                                  // first time the app is opened: nothing to announce
+  var items=[];
+  for(var i=0;i<VERSION_HISTORY.length;i++){if(VERSION_HISTORY[i].v===seen)break;items.push(VERSION_HISTORY[i]);}
+  if(!items.length)return;
+  var html='<h3>✔ App updated to version '+esc(APP_VERSION)+'</h3><p style="font-size:.9rem">Your saved days are all still here.</p>';
+  items.forEach(function(h){html+='<p style="margin:8px 0 2px"><b>Version '+esc(h.v)+'</b></p><ul style="margin:0;padding-left:20px;font-size:.9rem">'+h.notes.map(function(n){return '<li>'+esc(n)+'</li>';}).join('')+'</ul>';});
+  modal(html,[{t:'OK',c:'primary',v:1}]);
+}
+
+/* ---------- start ---------- */
+(function init(){
+  purgeTrash();applyTextSize();
+  var r=tonightRec();
+  if(!hasData(r)){r.date=todayISO();r.site=state.site||r.site;}
+  save();renderInputs();renderBackup();
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
+  if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){navigator.serviceWorker.register('sw.js').catch(function(){});}
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)renderBanners();});
+  checkUpdateNotice();
+})();
+})();
+
+</script>
+</body>
+</html>
