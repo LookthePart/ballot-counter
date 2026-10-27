@@ -433,8 +433,9 @@ var KEYS=['recvL','recvS','sealL','sealS','openL','openS','m1pub','m1prot','m2pu
 var DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 /* ===== RELEASES: to publish an update, change APP_VERSION and add a new entry at the TOP of VERSION_HISTORY ===== */
-var APP_VERSION='1.3';
+var APP_VERSION='1.3.1';
 var VERSION_HISTORY=[   // newest first
+  {v:'1.3.1',date:'October 2026',notes:['Ballot Reconciliation (Lifetime) now shows ** when an earlier day is missing its Sealed and Opened numbers.']},
   {v:'1.3',date:'October 2026',notes:[
     'New Ballots Received Today: Ballot Reconciliation now counts the ballots left over from yesterday plus the new ones received today.',
     'A * means a number cannot be calculated. A ** after a number means it is missing some data. The missing dates and items are listed under it.',
@@ -1023,6 +1024,9 @@ function totalsModel(r){
   }
   var verT=comb(function(a){return (a[0]+a[1])-(a[2]+a[3]);},[unusedY,recvT,PV.rawDaily,unusedT]);
   var verL=comb(function(a){return a[0]-(a[1]+a[2]);},[recvL,PV.rawLife,unusedT]);
+  // the Lifetime check is only complete when every earlier day has its Unused (Sealed / Opened) numbers too
+  if(verL&&verL!==''){var ugd=missingDatesFor(r,NEED.unused,true).filter(function(d){return d<r.date;});
+    if(ugd.length){verL.gap=true;(verL.dates=verL.dates||[]);ugd.forEach(function(d){if(verL.dates.indexOf(d)<0)verL.dates.push(d);});}}
   var ver=[
     row('Ballot Reconciliation (Today)','',verT,{red:1,sgn:1}),
     row('Ballot Reconciliation (Lifetime)','',verL,{red:1,sgn:1})
