@@ -83,6 +83,7 @@ input:focus,textarea:focus{outline:5px solid #1e6bff;outline-offset:1px}
 .res{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #bbb}
 .res:last-child{border-bottom:0}
 .res .k{font-size:1.05rem;font-weight:700;flex:1;min-width:0}
+.res .k small{padding-right:24px}   /* keeps the gray help text away from the number */
 .res .v{font-size:clamp(1.3rem,7vw,1.9rem);font-weight:800;min-width:3.5ch;text-align:right;overflow-wrap:anywhere}
 .res.flag{border-radius:10px;padding:12px;margin-top:6px;border:3px solid}
 .res.flag.zero{background:var(--greenbg);border-color:var(--green);color:var(--green)}
@@ -136,8 +137,11 @@ table.sum td,table.sum th{overflow-wrap:anywhere}
 .modal.compact .shot{font-size:.8rem;padding:6px 8px;margin:0 0 6px;border-width:2px}
 table.sum td:first-child,table.sum th:first-child{text-align:left}
 table.sum th{background:#e4e8f0}
+table.sum th:first-child{background:#fff;border-top:0;border-left:0;border-bottom:0}
+table.sum tr:first-child+tr.sec td{border-top-color:var(--navy)}
 table.sum tr.sec td{background:var(--navy);color:#fff;font-weight:800;text-align:left}
-table.sum td.b{font-weight:800}
+table.sum td.b{font-weight:800;white-space:nowrap}
+.sumlegend{margin:8px 0 0;font-size:.78rem;color:#6b6b6b}
 .ok{color:var(--green);font-weight:800}
 /* Settings page only: lighter look */
 #s-settings h2.plain{border-bottom:0;padding-bottom:0;margin:26px 0 6px}
@@ -242,9 +246,12 @@ table.sum td.b{font-weight:800}
     <input class="num" data-k="epoll" inputmode="numeric" pattern="[0-9]*">
   </div>
 
-  <h2 class="sub">TOTALS: Received &amp; Not Used</h2>
+  <h2 class="sub">TOTALS: Handcounted</h2>
   <div class="card" id="paTBox"></div>
   <div class="card close" id="paLBox"></div>
+
+  <h2 class="sub">TOTALS: USED BALLOTS</h2>
+  <div class="card" id="usedBox"></div>
 
   <h2 class="sub">TOTALS: Public Count</h2>
   <div class="card" id="pubBox"></div>
@@ -252,17 +259,14 @@ table.sum td.b{font-weight:800}
   <h2 class="sub">TOTALS: Protected Count</h2>
   <div class="card" id="protBox"></div>
 
-  <h2 class="sub">TOTALS: Voter Reconciliation (Today)</h2>
+  <h2 class="sub">VERIFY: Voter Reconciliation (Today)</h2>
   <div class="card" id="recBoxT"></div>
 
-  <h2 class="sub">TOTALS: Voter Reconciliation (Lifetime)</h2>
+  <h2 class="sub">VERIFY: Voter Reconciliation (Lifetime)</h2>
   <div class="card" id="recBoxL"></div>
 
-  <h2 class="sub">TOTALS: USED BALLOTS</h2>
-  <div class="card" id="usedBox"></div>
-
-  <h2 class="sub">VERIFY: Accounting for Every Ballot</h2>
-  <div class="card" id="verBox"></div>
+  <h2 class="sub">VERIFY: Handcount vs Expected</h2>
+  <div class="card" id="hvBox"></div>
 
   <h2 class="sub">Personal Notes for the day</h2>
   <div class="card">
@@ -433,8 +437,17 @@ var KEYS=['recvL','recvS','sealL','sealS','openL','openS','m1pub','m1prot','m2pu
 var DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 /* ===== RELEASES: to publish an update, change APP_VERSION and add a new entry at the TOP of VERSION_HISTORY ===== */
-var APP_VERSION='1.3.1';
+var APP_VERSION='1.4';
 var VERSION_HISTORY=[   // newest first
+  {v:'1.4',date:'October 2026',notes:[
+    'New section: VERIFY: Handcount vs Expected. It shows the Expected Unused Ballots, the Actual Unused Ballots (Today), and the Handcount Reconciliation (Today).',
+    'The Voter Reconciliation sections are now under VERIFY, and their rows are named Public Count Change (Today) and ePoll Change (Today).',
+    'TOTALS: Received & Not Used is now TOTALS: Handcounted. Total Used Ballots is right below it.',
+    'Removed Ballot Reconciliation and Total Unused Ballots (Lifetime).',
+    'Past Days shows Complete in green. The bottom bar stays on Past Days when you edit an old day.',
+    'New layout for the spreadsheet: TOTALS and VERIFICATION CHECKS headings. The saved image matches the screen.',
+    'Added the Oct 26 numbers.'
+  ]},
   {v:'1.3.1',date:'October 2026',notes:['Ballot Reconciliation (Lifetime) now shows ** when an earlier day is missing its Sealed and Opened numbers.']},
   {v:'1.3',date:'October 2026',notes:[
     'New Ballots Received Today: Ballot Reconciliation now counts the ballots left over from yesterday plus the new ones received today.',
@@ -748,7 +761,7 @@ function protVals(r,P0){
   var hasToday=P.cur.some(function(x){return x!==null;});
   var chg=raw(P.chg),since=raw(P.since);
   var ps=function(x){return pn(x)===null?0:pn(x);};
-  // Used Ballots (Today) = Change Since Yesterday + Provisional + Spoiled
+  // Total Used Ballots (Today) = Change Since Yesterday + Provisional + Spoiled
   var daily=!hasToday?'':(chg===null?null:show({t:chg.t+ps(r.v.prov)+ps(r.v.spoil),star:chg.star}));
   // Total Used Ballots (Lifetime) = Lifetime Change + every Provisional and Spoiled from Day 1 through this day
   var life=!hasToday?'':null;
@@ -770,7 +783,8 @@ function protVals(r,P0){
 var FIELD_LABEL={recvL:'Received (Large)',recvS:'Received (Small)',sealL:'Sealed (Large)',sealS:'Sealed (Small)',openL:'Opened (Large)',openS:'Opened (Small)',m1pub:'Machine 1 - Public',m1prot:'Machine 1 - Protected Count',m2pub:'Machine 2 - Public',m2prot:'Machine 2 - Protected Count',prov:'Provisional',spoil:'Spoiled',epoll:'ePoll'};
 var NEED={pub:['m1pub','m2pub'],ep:['epoll'],prot:['m1prot','m2prot'],recv:['recvL','recvS'],unused:['sealL','sealS','openL','openS'],sp:['prov','spoil']};
 function needFor(l){
-  if(l.indexOf('Ballot Reconciliation')===0)return NEED.recv.concat(NEED.unused,NEED.prot);
+  if(l==='Handcount Reconciliation (Today)')return NEED.recv.concat(NEED.prot,NEED.unused);
+  if(l==='Expected Unused Ballots')return NEED.recv.concat(NEED.prot);
   if(l.indexOf('Reconciliation')===0)return NEED.pub.concat(NEED.ep);
   if(l.indexOf('Public Count')===0)return NEED.pub;
   if(l.indexOf('ePoll')===0)return NEED.ep;
@@ -804,10 +818,9 @@ function recHas(r,d,k){
 function yestNeed(r,l){   // rows that also need yesterday's form: which of yesterday's boxes they use
   if(!(state.startDate&&r.date>state.startDate))return null;
   var k=null;
-  if(l==='Ballot Reconciliation (Today)')k=NEED.unused;
-  else if(l==='Used Ballots (Today)'||l==='Protected Count')k=NEED.prot;
-  else if(l==='Public Count'||l==='Public Count (Today)')k=NEED.pub;
-  else if(l==='ePoll (Today)')k=NEED.ep;
+  if(l==='Total Used Ballots (Today)'||l==='Protected Count')k=NEED.prot;
+  else if(l==='Public Count'||l==='Public Count Change (Today)')k=NEED.pub;
+  else if(l==='ePoll Change (Today)')k=NEED.ep;
   else if(l==='Reconciliation (Today)')k=NEED.pub.concat(NEED.ep);
   return k?{d:isoPlus(r.date,-1),keys:k}:null;
 }
@@ -905,26 +918,26 @@ function renderUsed(r){
   var V=protVals(r),h='',gaps=missingFor(r)||[];
   var life=V.life;if(life&&gaps.length&&String(life).slice(-1)!=='*')life+='**';
   var lifeHtml=life;
-  function res(l,val){return '<div class="res"><span class="k">'+l+ibtn(l)+'</span><span class="v">'+vh(val===null?'':val)+'</span></div>';}
-  h+=res('Used Ballots (Today)',V.daily);
-  h+=res('Total Used Ballots (Lifetime)',life);
-  h+='<div class="note"><b>Calculations</b><ul style="margin:2px 0 0;padding-left:18px"><li>Used Ballots (Today) = Protected Count Change Since Yesterday + Provisional + Spoiled</li><li>Total Used Ballots (Lifetime) = Protected Count Lifetime Change + Provisional (Lifetime) + Spoiled (Lifetime)</li></ul></div>';
-  h+=protNote([V.daily,life],'',{gapDates:gaps,blankDates:blankDatesFor(r,[(V.daily===''||V.daily===null)?'Used Ballots (Today)':null,(life===''||life===null)?'Total Used Ballots (Lifetime)':null].filter(Boolean)),partial:partialList(r,[['m1prot','m2prot']]),date:r.date,fields:missingFieldLines(r,[(V.daily===''||V.daily===null)?'Used Ballots (Today)':null,(life===''||life===null)?'Total Used Ballots (Lifetime)':null].filter(Boolean)).concat(gaps.length?missingFieldLines(r,['Total Used Ballots (Lifetime)'],['prov','spoil']):[])});
+  function res(l,val,sub){return '<div class="res"><span class="k">'+l+ibtn(l)+'<small style="display:block;color:#9a9a9a;font-size:.72rem;font-style:italic;font-weight:400;margin-top:2px">'+sub+'</small></span><span class="v">'+vh(val===null?'':val)+'</span></div>';}
+  h+=res('Total Used Ballots (Today)',V.daily,'Protected Count Change Since Yesterday + Provisional + Spoiled');
+  h+=res('Total Used Ballots (Lifetime)',life,'Protected Count Lifetime Change + Provisional (Lifetime) + Spoiled (Lifetime)');
+  h+=protNote([V.daily,life],'',{gapDates:gaps,blankDates:blankDatesFor(r,[(V.daily===''||V.daily===null)?'Total Used Ballots (Today)':null,(life===''||life===null)?'Total Used Ballots (Lifetime)':null].filter(Boolean)),partial:partialList(r,[['m1prot','m2prot']]),date:r.date,fields:missingFieldLines(r,[(V.daily===''||V.daily===null)?'Total Used Ballots (Today)':null,(life===''||life===null)?'Total Used Ballots (Lifetime)':null].filter(Boolean)).concat(gaps.length?missingFieldLines(r,['Total Used Ballots (Lifetime)'],['prov','spoil']):[])});
   if(h===lastUsed)return;lastUsed=h;box.innerHTML=h;
 }
 
 
 /* ---------- "i" pop-up definitions: [label starts with, definition, calculation] ---------- */
 var INFO=[
- ['Public Count (Today)','Public counts from all machines - today only.','Public Count (Today) \u2212 Public Count (Yesterday)','For Day 1, this will use Today\u2019s value \u2212 Starting Count.'],
+ ['Public Count Change (Today)','Public counts from all machines - today only.','Public Count (Today) \u2212 Public Count (Yesterday)','For Day 1, this will use Today\u2019s value \u2212 Starting Count.'],
  ['Public Count (Lifetime)','Public counts from all machines (running tally from Day 1).','Machine 1 Public + Machine 2 Public'],
  ['ePoll (Lifetime)','Running total of voters who checked into polling site using the touchpad since start of the Election Cycle.','ePoll'],
- ['ePoll (Today)','Voters who checked into polling site using the touchpad - today only.','ePoll (Today) \u2212 ePoll (Yesterday)','For Day 1, this will use Today\u2019s value \u2212 Starting Count.'],
- ['Reconciliation (Today)','Difference between Public Count and ePoll Count.','Public Count (Today) \u2212 ePoll (Today)','Always shown as a positive number. Voter Discrepancy. Measures difference between Public Count and ePoll Count.'],
+ ['ePoll Change (Today)','Voters who checked into polling site using the touchpad - today only.','ePoll (Today) \u2212 ePoll (Yesterday)','For Day 1, this will use Today\u2019s value \u2212 Starting Count.'],
+ ['Reconciliation (Today)','Difference between Public Count and ePoll Count.','Public Count Change (Today) \u2212 ePoll Change (Today)','Always shown as a positive number. Voter Discrepancy. Measures difference between Public Count and ePoll Count.'],
  ['Spoiled + Provisional (Today)','','Spoiled (Today) + Provisional (Today)'],
  ['Total Spoiled + Provisional (Lifetime)','','Spoiled + Provisional added up for every day from Day 1 through this day'],
- ['Ballot Reconciliation (Today)','Can I account for every ballot? Zero means yes.','Unused Ballots (Yesterday) + New Ballots Received (Today) \u2212 (Used Ballots (Today) + Unused Ballots (Today))','For Day 1, Unused Ballots (Yesterday) is 0.'],
- ['Ballot Reconciliation (Lifetime)','Can I account for every ballot since Day 1? Zero means yes.','Total Ballots Received (Lifetime) \u2212 (Total Used Ballots (Lifetime) + Unused Ballots (Today))'],
+ ['Expected Unused Ballots','The expected number of unused ballots on hand today.','Total Received (Lifetime) \u2212 Protected Count Change (Lifetime) \u2212 Provisional Count (Lifetime) \u2212 Spoiled (Lifetime)'],
+ ['Handcount Reconciliation (Today)','Expected Unused Ballots compared with the hand-counted Actual Unused Ballots (Today). Zero means they match.','Expected Unused Ballots \u2212 Actual Unused Ballots (Today)','Always shown as a positive number.'],
+ ['Actual Unused Ballots (Today)','The number of hand-counted unused ballots today.','Sealed + Opened'],
  ['Public Count, Starting','','Machine 1 + Machine 2 starting counts from Settings'],
  ['Public Count, Yesterday','','The Public Counts on yesterday\u2019s form','Day 1 has no yesterday.'],
  ['Public Count, Today','','Machine 1 + Machine 2 Public Counts on this form'],
@@ -932,7 +945,6 @@ var INFO=[
  ['New Ballots Received (Today)','Number of sealed ballots received by polling location that morning. Includes both Large Ballots and the Small Cards.','Total Received (Large Ballot + Small Card)'],
  ['Total Ballots Received (Lifetime)','Running total of sealed ballots received during Election Cycle.','New Ballots Received (Today) added up for every day from Day 1 through this day'],
  ['Unused Ballots (Today)','Number of unused ballots that day. Includes both sealed and unsealed ballots.','Sealed + Opened'],
- ['Total Unused Ballots (Lifetime)','Running total of \u201Cunused ballots\u201D during Election Cycle.','Unused Ballots (Today) added up for every day from Day 1 through this day'],
  ['Protected Count, Starting','','Machine 1 + Machine 2 starting counts from Settings'],
  ['Protected Count, Yesterday','','The Protected Counts on yesterday\u2019s form','Day 1 has no yesterday.'],
  ['Protected Count, Today','','Machine 1 + Machine 2 Protected Counts on this form'],
@@ -940,7 +952,7 @@ var INFO=[
  ['Public Count|Lifetime Change','','Public Count (Today) \u2212 Public Count (Starting)'],
  ['Protected Count|Change Since Yesterday','','Protected Count (Today) \u2212 Protected Count (Yesterday)','For Day 1, this will use Today\u2019s value \u2212 Starting Count.'],
  ['Protected Count|Lifetime Change','','Protected Count (Today) \u2212 Protected Count (Starting)'],
- ['Used Ballots (Today)','','Protected Count Change Since Yesterday + Provisional + Spoiled','Used Ballots takes into account Protected Count, Provisional, and Spoiled ballots. It does not include the Public Count.'],
+ ['Total Used Ballots (Today)','','Protected Count Change Since Yesterday + Provisional + Spoiled','Used Ballots takes into account Protected Count, Provisional, and Spoiled ballots. It does not include the Public Count.'],
  ['Total Used Ballots (Lifetime)','','Protected Count Lifetime Change + Provisional (Lifetime) + Spoiled (Lifetime)','Used Ballots takes into account Protected Count, Provisional, and Spoiled ballots. It does not include the Public Count.']
 ];
 function infoFor(label,ctx){
@@ -994,7 +1006,7 @@ function totalsModel(r){
     return {t:t,star:false,gap:gd.length>0,dates:gd};
   }
   var recvT=mine(o.C6),unusedT=mine(o.C36);
-  var recvL=life(function(x){return calc(x).C6;},NEED.recv),unusedL=life(function(x){return calc(x).C36;},NEED.unused);
+  var recvL=life(function(x){return calc(x).C6;},NEED.recv);
   var provT=num(r,'prov'),spoilT=num(r,'spoil');
   var recTd=comb(function(a){return Math.abs(a[0]-a[1]);},[pubC,epC]);
   var recLf=comb(function(a){return Math.abs(a[0]-a[1]);},[pubT,epT]);
@@ -1009,35 +1021,25 @@ function totalsModel(r){
     row('Reconciliation (Lifetime)',subRec,recLf,{red:1})
   ];
   var recT=[
-    row('Public Count (Today)','',pubC,{sgn:1}),
-    row('ePoll (Today)','',epC,{sgn:1}),
+    row('Public Count Change (Today)','',pubC,{sgn:1}),
+    row('ePoll Change (Today)','',epC,{sgn:1}),
     row('Reconciliation (Today)',subRec,recTd,{red:1})
   ];
   var PV=protVals(r);
   var provT_=has(r,'prov')?mine(num(r,'prov')):'',spoilT_=has(r,'spoil')?mine(num(r,'spoil')):'';
-  // Unused Ballots (Yesterday): Day 1 starts from none; later days need yesterday's form (null = n/a)
-  var unusedY=null;
-  if(state.startDate&&r.date===state.startDate)unusedY={t:0,star:false,gap:false};
-  else if(state.startDate&&r.date>state.startDate){
-    var pr=prevRec(r),pu=pr&&hasData(pr)?calc(pr).C36:null;
-    unusedY=(pu!==null&&pu!==undefined)?{t:pu,star:false,gap:false}:'';   // blank (*) until yesterday's Sealed and Opened are entered
-  }
-  var verT=comb(function(a){return (a[0]+a[1])-(a[2]+a[3]);},[unusedY,recvT,PV.rawDaily,unusedT]);
-  var verL=comb(function(a){return a[0]-(a[1]+a[2]);},[recvL,PV.rawLife,unusedT]);
-  // the Lifetime check is only complete when every earlier day has its Unused (Sealed / Opened) numbers too
-  if(verL&&verL!==''){var ugd=missingDatesFor(r,NEED.unused,true).filter(function(d){return d<r.date;});
-    if(ugd.length){verL.gap=true;(verL.dates=verL.dates||[]);ugd.forEach(function(d){if(verL.dates.indexOf(d)<0)verL.dates.push(d);});}}
-  var ver=[
-    row('Ballot Reconciliation (Today)','',verT,{red:1,sgn:1}),
-    row('Ballot Reconciliation (Lifetime)','',verL,{red:1,sgn:1})
+  var expL=comb(function(a){return a[0]-a[1];},[recvL,PV.rawLife]);   // Total Received (Lifetime) - Protected Count Change (Lifetime) - Provisional (Lifetime) - Spoiled (Lifetime)
+  var hv=[
+    row('Expected Unused Ballots','Total Received (Lifetime) \u2212 Protected Count Change (Lifetime) \u2212 Provisional Count (Lifetime) \u2212 Spoiled (Lifetime)',expL),
+    row('Actual Unused Ballots (Today)','',unusedT),
+    row('Handcount Reconciliation (Today)','Expected Unused Ballots \u2212 Actual Unused Ballots (Today)',comb(function(a){return Math.abs(a[0]-a[1]);},[expL,unusedT]),{red:1})
   ];
   var spT=(has(r,'prov')||has(r,'spoil'))?mine(num(r,'prov')+num(r,'spoil')):'';
   var spL=life(function(x){return (has(x,'prov')||has(x,'spoil'))?num(x,'prov')+num(x,'spoil'):null;},NEED.sp);
   var paT=[row('New Ballots Received (Today)','',recvT),row('Unused Ballots (Today)','',unusedT),row('Spoiled + Provisional (Today)','',spT)];
-  var paL=[row('Total Ballots Received (Lifetime)','',recvL),row('Total Unused Ballots (Lifetime)','',unusedL),row('Total Spoiled + Provisional (Lifetime)','',spL)];
-  return {recL:recL,recT:recT,paT:paT,paL:paL,ver:ver,gaps:gaps,machine:partialP(PU)};
+  var paL=[row('Total Ballots Received (Lifetime)','',recvL),row('Total Spoiled + Provisional (Lifetime)','',spL)];
+  return {recL:recL,recT:recT,paT:paT,paL:paL,hv:hv,gaps:gaps,machine:partialP(PU)};
 }
-var lastTot={recL:'',recT:'',paT:'',paL:'',ver:''};
+var lastTot={recL:'',recT:'',paT:'',paL:'',hv:''};
 function renderTotals(r){
   var M=totalsModel(r);
   function box(id,rows,key,kset){
@@ -1055,22 +1057,22 @@ function renderTotals(r){
     if(h===lastTot[key])return;lastTot[key]=h;el.innerHTML=h;
   }
   var PUBK=['m1pub','m2pub'],PROTK=['m1prot','m2prot'];
-  box('#recBoxL',M.recL,'recL',[PUBK]);box('#recBoxT',M.recT,'recT',[PUBK]);box('#paTBox',M.paT,'paT',[]);box('#paLBox',M.paL,'paL',[]);box('#verBox',M.ver,'ver',[PROTK]);
+  box('#recBoxL',M.recL,'recL',[PUBK]);box('#recBoxT',M.recT,'recT',[PUBK]);box('#paTBox',M.paT,'paT',[]);box('#paLBox',M.paL,'paL',[]);box('#hvBox',M.hv,'hv',[PROTK]);
 }
 function totalsLedger(r){
   var M=totalsModel(r);
-  function n(x){return x===null?'*':x;}
+  function n(x){return (x===null||x==='')?'*':x;}
   function map(rows){return rows.map(function(x){return {k:'one',l:x.l,c:n(x.v),red:x.red};});}
   var PV=protVals(r);
-  return [{k:'sec',l:'TOTALS: Received & Not Used'}].concat(map(M.paT),map(M.paL),
+  return [{k:'sec',l:'TOTALS',ctr:1},{k:'sec',l:'TOTALS: Handcounted'}].concat(map(M.paT),map(M.paL),
+    [{k:'sec',l:'TOTALS: USED BALLOTS'},{k:'one',l:'Total Used Ballots (Today)',c:n(PV.daily)},{k:'one',l:'Total Used Ballots (Lifetime)',c:n(lifeStar(r,PV.life))}],
     cntLedger(r,protVals(r,pinfoK(r,['m1pub','m2pub'],['pub1','pub2'])),'Public Count','TOTALS: Public Count'),
     cntLedger(r,PV,'Protected Count','TOTALS: Protected Count'),
-    [{k:'sec',l:'TOTALS: Voter Reconciliation (Today)'}],map(M.recT),[{k:'sec',l:'TOTALS: Voter Reconciliation (Lifetime)'}],map(M.recL),
-    [{k:'sec',l:'TOTALS: USED BALLOTS'},{k:'one',l:'Used Ballots (Today)',c:n(PV.daily)},{k:'one',l:'Total Used Ballots (Lifetime)',c:n(lifeStar(r,PV.life))}],
-    [{k:'sec',l:'VERIFY: Accounting for Every Ballot'}],map(M.ver));
+    [{k:'sec',l:'VERIFICATION CHECKS',ctr:1,chk:1},{k:'sec',l:'VERIFY: Voter Reconciliation (Today)'}],map(M.recT),[{k:'sec',l:'VERIFY: Voter Reconciliation (Lifetime)'}],map(M.recL),
+    [{k:'sec',l:'VERIFY: Handcount vs Expected'}],map(M.hv));
 }
 function cntLedger(r,V,name,title){
-  function n(x){return x===null?'*':x;}
+  function n(x){return (x===null||x==='')?'*':x;}
   return [{k:'sec',l:title},
     {k:'one',l:name+', Starting (Day 1)',c:n(V.start)},
     {k:'one',l:name+', Yesterday',c:n(V.yest)},
@@ -1082,6 +1084,7 @@ function ledgerRows(r){
   var o=calc(r),v=r.v,red=(o.C31!==null&&o.C31!==0);
   return [
     {k:'head'},
+    {k:'sec',l:'Received Ballots'},
     {k:'tri',l:'New Ballots Received Today',a:v.recvL,b:v.recvS,c:o.C6},
     {k:'sec',l:'Unused Ballots'},
     {k:'tri',l:'Sealed - Never Opened',a:v.sealL,b:v.sealS,c:o.C9},
@@ -1122,7 +1125,8 @@ function ledgerCanvas(r){
   var meas=document.createElement('canvas').getContext('2d');
   var cl=[];
   if(r.comments){meas.font='500 26px '+FONT;cl=wrapLines(meas,'Comments: '+r.comments,W-2*pad);}
-  var H=pad+titleH+rows.length*rh+(cl.length?18+cl.length*34:0)+pad;
+  var lg=ledgerLegend(rows);
+  var H=pad+titleH+rows.length*rh+(lg.length?14+lg.length*30:0)+(cl.length?18+cl.length*34:0)+pad;
   var c=document.createElement('canvas');c.width=W*S;c.height=H*S;
   var x=c.getContext('2d');x.scale(S,S);
   x.fillStyle='#fff';x.fillRect(0,0,W,H);
@@ -1133,10 +1137,11 @@ function ledgerCanvas(r){
   rows.forEach(function(row){
     var mid=y+rh/2;
     if(row.k==='sec'){
-      x.fillStyle='#1b3a6b';x.fillRect(L,y,R-L,rh);x.fillStyle='#fff';x.textAlign='left';
-      fitFont(x,row.l,'800',24,R-L-24);x.fillText(row.l,L+12,mid);
+      x.fillStyle='#1b3a6b';x.fillRect(L,y,R-L,rh);x.fillStyle='#fff';x.textAlign=row.ctr?'center':'left';
+      fitFont(x,row.l,'800',24,R-L-24);x.fillText(row.l,row.ctr?(L+R)/2:L+12,mid);
+      if(row.chk){var tw=x.measureText(row.l).width;x.fillStyle='#4ade80';x.textAlign='left';x.fillText('\u2714',(L+R)/2+tw/2+10,mid);}
     } else if(row.k==='head'){
-      x.fillStyle='#e4e8f0';x.fillRect(L,y,R-L,rh);x.fillStyle='#111';x.textAlign='right';
+      x.fillStyle='#e4e8f0';x.fillRect(x1,y,R-x1,rh);x.fillStyle='#111';x.textAlign='right';
       [[(row.h||['Large Ballot','Small Card','TOTAL'])[0],x2],[(row.h||['Large Ballot','Small Card','TOTAL'])[1],x3],[(row.h||['Large Ballot','Small Card','TOTAL'])[2],R]].forEach(function(h){fitFont(x,h[0],'800',21,138);x.fillText(h[0],h[1]-12,mid);});
     } else if(row.k==='tri'){
       x.fillStyle='#111';x.textAlign='left';fitFont(x,row.l,'500',24,x1-L-24);x.fillText(row.l,L+12,mid);
@@ -1146,17 +1151,28 @@ function ledgerCanvas(r){
       x.fillStyle='#111';x.textAlign='left';fitFont(x,row.l,'500',24,R-L-170);x.fillText(row.l,L+12,mid);
       x.fillStyle=row.red?'#c00000':'#111';x.font='800 24px '+FONT;x.textAlign='right';x.fillText(fmt(row.c),R-12,mid);
     }
-    x.strokeStyle='#666';x.lineWidth=1;x.strokeRect(L+.5,y+.5,R-L-1,rh);
+    x.strokeStyle='#666';x.lineWidth=1;if(row.k==='head')x.strokeRect(x1+.5,y+.5,R-x1-1,rh);else x.strokeRect(L+.5,y+.5,R-L-1,rh);
+    if(row.k==='one'){x.beginPath();x.moveTo(x3+.5,y);x.lineTo(x3+.5,y+rh);x.stroke();}   // line before the number column, same as the on-screen table
     if(row.k==='tri'||row.k==='head'){
       [x1,x2,x3].forEach(function(vx){x.beginPath();x.moveTo(vx+.5,y);x.lineTo(vx+.5,y+rh);x.stroke();});
     }
     y+=rh;
   });
+  if(lg.length){
+    x.fillStyle='#6b6b6b';x.font='500 21px '+FONT;x.textAlign='left';x.textBaseline='top';
+    lg.forEach(function(line,i){x.fillText(line,pad,y+10+i*30);});
+    y+=14+lg.length*30;
+  }
   if(cl.length){
     x.fillStyle='#111';x.font='500 26px '+FONT;x.textAlign='left';x.textBaseline='top';
     cl.forEach(function(line,i){x.fillText(line,pad,y+18+i*34);});
   }
   return c;
+}
+function ledgerLegend(rows){   // what the * and ** in the table mean (only the ones that appear)
+  var one=false,two=false;
+  rows.forEach(function(w){[w.a,w.b,w.c].forEach(function(v){var t=String(v==null?'':v);if(/\*\*$/.test(t))two=true;else if(t==='*')one=true;});});
+  var out=[];if(one)out.push('* can\u2019t calculate due to missing data');if(two)out.push('** incomplete total due to missing data');return out;
 }
 function ledgerFile(r){
   return new Promise(function(res){
@@ -1171,10 +1187,10 @@ function showSummary(r){
   ledgerRows(r).forEach(function(w){
     if(w.k==='head')html+='<tr><th></th>'+(w.h||['Large Ballot','Small Card','TOTAL']).map(function(t){return '<th>'+t+'</th>';}).join('')+'</tr>';
     else if(w.k==='tri')html+='<tr><td>'+w.l+'</td><td>'+fmt(w.a)+'</td><td>'+fmt(w.b)+'</td><td class="b">'+fmt(w.c)+'</td></tr>';
-    else if(w.k==='sec')html+='<tr class="sec"><td colspan="4">'+w.l+'</td></tr>';
+    else if(w.k==='sec')html+='<tr class="sec"><td colspan="4"'+(w.ctr?' style="text-align:center"':'')+'>'+w.l+(w.chk?' <span style="color:#4ade80">\u2714</span>':'')+'</td></tr>';
     else if(w.k==='one')html+='<tr><td colspan="3">'+w.l+'</td><td class="b'+(w.red?' red':'')+'">'+fmt(w.c)+'</td></tr>';
   });
-  html+='</table>'+(r.comments?'<p style="margin:6px 0 0;font-size:.85rem"><b>Comments:</b> '+esc(r.comments)+'</p>':'');
+  html+='</table>'+ledgerLegend(ledgerRows(r)).map(function(t){return '<div class="sumlegend">'+t+'</div>';}).join('')+(r.comments?'<p style="margin:6px 0 0;font-size:.85rem"><b>Comments:</b> '+esc(r.comments)+'</p>':'');
   var ready=null,pending=ledgerFile(r).then(function(f){ready=f;return f;});   // made ahead so the tap can share right away
   modal(html,[
     {t:'🖼 Save Image',c:'primary',keep:true,fn:function(){
@@ -1283,7 +1299,7 @@ function renderHistory(){
     var o=calc(r),c=document.createElement('div');c.className='card night';
     var isToday=(r.id===state.currentId),done=KEYS.every(function(k){return has(r,k);}),st;
     if(!hasData(r))st='Empty';
-    else if(done){var sum=[],TM=totalsModel(r);TM.paL.concat(TM.recL).forEach(function(x){if(x.v!==null&&/^(Total Unused Ballots|Reconciliation) \(Lifetime\)/.test(x.l))sum.push(x.l+' '+fmt(x.v));});st='Complete'+(sum.length?' · '+sum.join(' · '):'');}
+    else if(done)st='<span style="color:var(--green);font-weight:400">Complete</span>';
     else if(isToday)st='<b style="color:var(--amber)">In progress</b>';
     else st='<span style="color:#b3261e;font-weight:400">Missing Data</span> - '+KEYS.filter(function(k){return has(r,k);}).length+'/'+KEYS.length+' fields complete';
     c.innerHTML='<div class="t">'+niceDate(r.date)+(isToday?' <span style="color:var(--green);font-size:.8em">(today)</span>':'')+'</div><div class="s">'+esc(r.site)+' · '+st+'</div>';
@@ -1348,15 +1364,15 @@ function numsCSV(){
     'Opened - Not Used - Large Ballot','Opened - Not Used - Small Card','Opened - Not Used - Total',
     'Machine 1 - Public','Machine 1 - Protected Count','Machine 2 - Public','Machine 2 - Protected Count',
     'Provisional','Spoiled','ePoll',
-    'Protected Count, Starting (Day 1)','Protected Count, Yesterday','Protected Count, Today','Change Since Yesterday','Lifetime Change','Used Ballots (Today)','Total Used Ballots (Lifetime)',
-    'Public Count (Today)','ePoll (Today)','Reconciliation (Today)','Public Count (Lifetime)','ePoll (Lifetime)','Reconciliation (Lifetime)',
-    'New Ballots Received (Today)','Unused Ballots (Today)','Spoiled + Provisional (Today)','Total Ballots Received (Lifetime)','Total Unused Ballots (Lifetime)','Total Spoiled + Provisional (Lifetime)','Ballot Reconciliation (Today)','Ballot Reconciliation (Lifetime)',
+    'Protected Count, Starting (Day 1)','Protected Count, Yesterday','Protected Count, Today','Change Since Yesterday','Lifetime Change','Total Used Ballots (Today)','Total Used Ballots (Lifetime)',
+    'Public Count Change (Today)','ePoll Change (Today)','Reconciliation (Today)','Public Count (Lifetime)','ePoll (Lifetime)','Reconciliation (Lifetime)',
+    'New Ballots Received (Today)','Unused Ballots (Today)','Spoiled + Provisional (Today)','Total Ballots Received (Lifetime)','Total Spoiled + Provisional (Lifetime)','Expected Unused Ballots','Actual Unused Ballots (Today)','Handcount Reconciliation (Today)',
     'Comments','Personal Notes'];
   var rows=state.records.filter(hasData).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.updated-b.updated;}).map(function(r){
     var o=calc(r),v=r.v,V=protVals(r);
     function cv(x){return x===null?'':String(x).replace(/,/g,'').replace('\u2212','-');}
     return [r.date,r.site,v.recvL,v.recvS,o.C6,v.sealL,v.sealS,o.C9,v.openL,v.openS,o.C10,v.m1pub,v.m1prot,v.m2pub,v.m2prot,v.prov,v.spoil,v.epoll,
-      cv(V.start),cv(V.yest),cv(V.today),cv(V.chg),cv(V.since),cv(V.daily),cv(V.life)].concat((function(M){return M.recT.concat(M.recL,M.paT,M.paL,M.ver);})(totalsModel(r)).map(function(x){return cv(x.v);}),[r.comments,r.notes]);
+      cv(V.start),cv(V.yest),cv(V.today),cv(V.chg),cv(V.since),cv(V.daily),cv(V.life)].concat((function(M){return M.recT.concat(M.recL,M.paT,M.paL,M.hv);})(totalsModel(r)).map(function(x){return cv(x.v);}),[r.comments,r.notes]);
   });
   return '﻿'+[head].concat(rows).map(function(row){return row.map(csvCell).join(',');}).join('\r\n');
 }
@@ -1388,7 +1404,7 @@ $('#btnWipe').onclick=function(){
   modal('<h3>Delete all data?</h3><p>This removes <b>all '+state.records.filter(hasData).length+' saved day(s)</b> and everything in Recently Deleted from this phone. It cannot be undone unless you made a Full Backup first.</p>',
     [{t:'No, Keep Everything',c:'primary',v:false},{t:'Yes, Delete All Data',c:'danger gap',v:true,delay:1500}]).then(function(y){
       if(!y)return;
-      state={records:[],trash:[],currentId:null,site:'GAX',lastBackup:null,startDate:'2026-10-19',prot1:'14473',prot2:'2740',protSeeded:true,weekPreloaded:true,weekPreloaded3:true,cleanup12:true,pub1:'0',pub2:'0',epoll0:'0'};editId=null;cameFromHistory=false;applyTextSize();
+      state={records:[],trash:[],currentId:null,site:'GAX',lastBackup:null,startDate:'2026-10-19',prot1:'14473',prot2:'2740',protSeeded:true,weekPreloaded:true,weekPreloaded4:true,cleanup12:true,pub1:'0',pub2:'0',epoll0:'0'};editId=null;cameFromHistory=false;applyTextSize();
       try{localStorage.removeItem(KEY);}catch(e){}
       tonightRec();save();renderInputs();renderBackup();switchTab('tonight');toast('All data deleted. Starting fresh.');
     });
@@ -1499,7 +1515,7 @@ function switchTab(t,keepEdit){
   if(t==='tonight'&&!keepEdit)renderInputs();
   $$('.screen').forEach(function(s){s.classList.remove('on');});
   $('#s-'+t).classList.add('on');
-  $$('nav.tabs button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===t);});
+  $$('nav.tabs button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===((t==='tonight'&&cameFromHistory)?'history':t));});   // a day opened from Past Days keeps Past Days highlighted
   if(t==='history')renderHistory();
   if(t==='backup')renderBackup();
   if(t==='settings')renderSettings();
@@ -1528,12 +1544,12 @@ function checkUpdateNotice0(){
 /* ---------- start ---------- */
 /* ---------- one-time pre-loaded numbers for the week of Oct 19-23 (real counts; never overwrites a day that already has data) ---------- */
 function preloadWeek(){
-  var D=[['2026-10-19',799,646,15272,3386,1444,53,0,1000,1500,500,1500,450,250],['2026-10-20',1389,1336,15863,4077,2723,32,8,0,1500,'','','',''],['2026-10-21',1837,2037,16311,4781,3871,25,4,0,1500,'','','',''],['2026-10-22',2297,2463,16771,5207,4757,31,4,0,1500,'','','',''],['2026-10-23',2872,2912,17347,5656,5780,31,7,0,1500,0,2000,497,15],['2026-10-24',3190,3117,17665,5861,6303,24,4,0,0,0,1250,439,272],['2026-10-25',3332,3312,17807,6057,6640,9,2,0,1500,0,2000,407,204]];
+  var D=[['2026-10-19',799,646,15272,3386,1444,53,0,1000,1500,500,1500,450,250],['2026-10-20',1389,1336,15863,4077,2723,32,8,0,1500,'','','',''],['2026-10-21',1837,2037,16311,4781,3871,25,4,0,1500,'','','',''],['2026-10-22',2297,2463,16771,5207,4757,31,4,0,1500,'','','',''],['2026-10-23',2872,2912,17347,5656,5780,31,7,0,1500,0,2000,497,15],['2026-10-24',3190,3117,17665,5861,6303,24,4,0,0,0,1250,439,272],['2026-10-25',3332,3312,17807,6057,6640,9,2,0,1500,0,2000,407,204],['2026-10-26',3614,3754,18089,6499,7362,18,4,0,0,0,2000,338,25]];
   D.forEach(function(d){
     var ex=state.records.filter(function(r){return r.date===d[0];})[0];
     var vals={m1pub:d[1],m2pub:d[2],m1prot:d[3],m2prot:d[4],epoll:d[5],spoil:d[6],prov:d[7],recvL:d[8],recvS:d[9],sealL:d[10],sealS:d[11],openL:d[12],openS:d[13]};
     var r=ex;
-    if(!r){r={id:'pre-'+d[0],date:d[0],site:state.site||'GAX',v:{},comments:'',notes:'',updated:Date.now(),keep:true};KEYS.forEach(function(k){r.v[k]='';});state.records.push(r);}
+    if(!r){r={id:'pre-'+d[0],date:d[0],site:state.site||'GAX',v:{},comments:'',notes:'',updated:Date.now(),keep:true};KEYS.forEach(function(k){r.v[k]='';});state.records.push(r);if(d[0]===todayISO()&&!state.currentId)state.currentId=r.id;}   // a pre-loaded form for today becomes today's form
     var changed=false;   // only blank boxes are filled in; anything already typed is never touched
     Object.keys(vals).forEach(function(k){if(vals[k]===''||(r.v[k]!==undefined&&r.v[k]!==''&&r.v[k]!==null))return;r.v[k]=String(vals[k]);changed=true;});
     if(changed){r.keep=true;r.updated=Date.now();}
@@ -1549,7 +1565,7 @@ if(!state.cleanup12){
     return false;
   });
 }
-if(!state.weekPreloaded3){state.weekPreloaded=true;state.weekPreloaded3=true;preloadWeek();}
+if(!state.weekPreloaded4){state.weekPreloaded=true;state.weekPreloaded4=true;preloadWeek();}
 
 (function init(){
   purgeTrash();applyTextSize();
